@@ -33,7 +33,7 @@
         header {
             text-align: center;
             margin-bottom: 20px;
-            padding: 20px 0;
+            padding: 15px 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border-radius: 12px;
@@ -119,6 +119,50 @@
 
         .mark-read-btn-bottom.read:hover {
             background: #218838;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-container {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .collapse-all-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .collapse-all-btn:hover {
+            background: #5a6fd8;
         }
 
         .post-header {
@@ -325,7 +369,6 @@
     <div class="container">
         <header>
             <h1>Learner</h1>
-            <p>Insights and summaries from various learning resources</p>
         </header>
 
         <div id="loading" class="loading">
@@ -334,6 +377,13 @@
 
         <div id="error" class="error" style="display: none;">
             Failed to load posts. Please try again later.
+        </div>
+
+        <div class="controls">
+            <div class="search-container">
+                <input type="text" class="search-bar" id="search-bar" placeholder="Search posts...">
+            </div>
+            <button class="collapse-all-btn" id="collapse-all-btn">Collapse All</button>
         </div>
 
         <div id="posts-container">
@@ -734,8 +784,62 @@
             }, 1000);
         }
 
+        // Search functionality
+        function setupSearch() {
+            const searchBar = document.getElementById('search-bar');
+            const postsContainer = document.getElementById('posts-container');
+
+            searchBar.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                const posts = postsContainer.querySelectorAll('.blog-post');
+
+                posts.forEach(post => {
+                    const title = post.querySelector('.post-title').textContent.toLowerCase();
+                    const content = post.querySelector('.post-content').textContent.toLowerCase();
+
+                    if (searchTerm === '' || title.includes(searchTerm) || content.includes(searchTerm)) {
+                        post.style.display = '';
+                    } else {
+                        post.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Collapse/Expand all functionality
+        function setupCollapseAll() {
+            const collapseAllBtn = document.getElementById('collapse-all-btn');
+            const postsContainer = document.getElementById('posts-container');
+            let allCollapsed = false;
+
+            collapseAllBtn.addEventListener('click', function() {
+                const posts = postsContainer.querySelectorAll('.blog-post');
+
+                if (allCollapsed) {
+                    // Expand all
+                    posts.forEach(post => {
+                        post.classList.remove('collapsed');
+                    });
+                    this.textContent = 'Collapse All';
+                    allCollapsed = false;
+                } else {
+                    // Collapse all
+                    posts.forEach(post => {
+                        post.classList.add('collapsed');
+                    });
+                    this.textContent = 'Expand All';
+                    allCollapsed = true;
+                }
+            });
+        }
+
         // Load posts when page loads
-        document.addEventListener('DOMContentLoaded', loadPosts);
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPosts().then(() => {
+                setupSearch();
+                setupCollapseAll();
+            });
+        });
     </script>
 </body>
 </html>
