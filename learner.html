@@ -69,7 +69,7 @@
 
         .blog-post {
             background: white;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             border-radius: 12px;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
             overflow: hidden;
@@ -95,6 +95,30 @@
 
         .blog-post.collapsed .mark-read-btn {
             margin-top: 0;
+        }
+
+        .mark-read-btn-bottom {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.2s ease;
+        }
+
+        .mark-read-btn-bottom:hover {
+            background: #5a6fd8;
+        }
+
+        .mark-read-btn-bottom.read {
+            background: #28a745;
+        }
+
+        .mark-read-btn-bottom.read:hover {
+            background: #218838;
         }
 
         .post-header {
@@ -408,10 +432,26 @@
                 toggleReadStatus(postDiv, markReadBtn, post.videoUrl);
             });
 
+            // Create bottom mark read button
+            const markReadBtnBottom = document.createElement('button');
+            markReadBtnBottom.className = 'mark-read-btn-bottom';
+
+            // Initialize bottom button state based on post.isRead
+            if (post.isRead) {
+                markReadBtnBottom.textContent = 'Mark as unread';
+                markReadBtnBottom.classList.add('read');
+            } else {
+                markReadBtnBottom.textContent = 'Mark as read';
+            }
+
+            markReadBtnBottom.addEventListener('click', function() {
+                toggleReadStatusNoCollapse(postDiv, markReadBtnBottom, post.videoUrl);
+            });
+
             // Add click handler to header for collapse/expand
             headerDiv.addEventListener('click', function(e) {
-                // Don't trigger if clicking on the mark read button
-                if (e.target === markReadBtn) {
+                // Don't trigger if clicking on either mark read button
+                if (e.target === markReadBtn || e.target === markReadBtnBottom) {
                     return;
                 }
                 toggleCollapse(postDiv);
@@ -441,6 +481,9 @@
                 // Fallback to plain text with line breaks
                 contentDiv.innerHTML = (post.summary || '').replace(/\n/g, '<br>');
             }
+
+            // Add bottom button to content
+            contentDiv.appendChild(markReadBtnBottom);
 
             postDiv.appendChild(headerDiv);
             postDiv.appendChild(contentDiv);
@@ -563,18 +606,82 @@
         function toggleReadStatus(postDiv, button, videoUrl) {
             const isRead = postDiv.classList.contains('read');
 
+            // Find both buttons to sync them
+            const topButton = postDiv.querySelector('.mark-read-btn');
+            const bottomButton = postDiv.querySelector('.mark-read-btn-bottom');
+
             if (isRead) {
                 // Mark as unread - force expand
                 postDiv.classList.remove('read', 'collapsed');
-                button.textContent = 'Mark as read';
-                button.classList.remove('read');
+
+                // Update both buttons
+                if (topButton) {
+                    topButton.textContent = 'Mark as read';
+                    topButton.classList.remove('read');
+                }
+                if (bottomButton) {
+                    bottomButton.textContent = 'Mark as read';
+                    bottomButton.classList.remove('read');
+                }
+
                 // Call webhook for unread (read=0)
                 callWebhook(videoUrl, 0);
             } else {
                 // Mark as read - force collapse
                 postDiv.classList.add('read', 'collapsed');
-                button.textContent = 'Mark as unread';
-                button.classList.add('read');
+
+                // Update both buttons
+                if (topButton) {
+                    topButton.textContent = 'Mark as unread';
+                    topButton.classList.add('read');
+                }
+                if (bottomButton) {
+                    bottomButton.textContent = 'Mark as unread';
+                    bottomButton.classList.add('read');
+                }
+
+                // Call webhook for read (read=1)
+                callWebhook(videoUrl, 1);
+            }
+        }
+
+        function toggleReadStatusNoCollapse(postDiv, button, videoUrl) {
+            const isRead = postDiv.classList.contains('read');
+
+            // Find both buttons to sync them
+            const topButton = postDiv.querySelector('.mark-read-btn');
+            const bottomButton = postDiv.querySelector('.mark-read-btn-bottom');
+
+            if (isRead) {
+                // Mark as unread - don't change collapse state
+                postDiv.classList.remove('read');
+
+                // Update both buttons
+                if (topButton) {
+                    topButton.textContent = 'Mark as read';
+                    topButton.classList.remove('read');
+                }
+                if (bottomButton) {
+                    bottomButton.textContent = 'Mark as read';
+                    bottomButton.classList.remove('read');
+                }
+
+                // Call webhook for unread (read=0)
+                callWebhook(videoUrl, 0);
+            } else {
+                // Mark as read - don't change collapse state
+                postDiv.classList.add('read');
+
+                // Update both buttons
+                if (topButton) {
+                    topButton.textContent = 'Mark as unread';
+                    topButton.classList.add('read');
+                }
+                if (bottomButton) {
+                    bottomButton.textContent = 'Mark as unread';
+                    bottomButton.classList.add('read');
+                }
+
                 // Call webhook for read (read=1)
                 callWebhook(videoUrl, 1);
             }
