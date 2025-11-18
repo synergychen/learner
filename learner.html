@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learner</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .error {
+            background-color: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .blog-post {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .blog-post:hover:not(.read) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 25px rgba(0,0,0,0.12);
+        }
+
+        .blog-post.read {
+            opacity: 0.5;
+        }
+
+        .blog-post.collapsed .post-content {
+            display: none;
+        }
+
+        .post-header {
+            padding: 25px 30px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .post-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .post-title a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .post-title a:hover {
+            color: #667eea;
+        }
+
+        .post-date {
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: pre-line;
+        }
+
+        .mark-read-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s ease;
+        }
+
+        .mark-read-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .mark-read-btn.read {
+            background: #28a745;
+        }
+
+        .mark-read-btn.read:hover {
+            background: #218838;
+        }
+
+        .sync-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .sync-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .post-content {
+            padding: 25px 30px 30px;
+        }
+
+        .post-content h1,
+        .post-content h2,
+        .post-content h3,
+        .post-content h4,
+        .post-content h5,
+        .post-content h6 {
+            margin: 20px 0 15px;
+            color: #2c3e50;
+        }
+
+        .post-content h1 { font-size: 1.4rem; color: #2c3e50; }
+        .post-content h2 { font-size: 1.3rem; }
+        .post-content h3 { font-size: 1.2rem; }
+        .post-content h4 { font-size: 1.1rem; }
+        .post-content h5 { font-size: 1.0rem; }
+        .post-content h6 { font-size: 0.95rem; }
+
+        .post-content p {
+            margin-bottom: 15px;
+            color: #444;
+        }
+
+        .post-content ul,
+        .post-content ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+
+        .post-content li {
+            margin-bottom: 8px;
+        }
+
+        .post-content blockquote {
+            border-left: 4px solid #667eea;
+            margin: 20px 0;
+            padding: 15px 20px;
+            background: #f8f9ff;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .post-content code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+        }
+
+        .post-content pre {
+            background: #f8f8f8;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .post-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .post-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 5px 0 20px 0;
+        }
+
+        .post-content th,
+        .post-content td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .post-content th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .post-content a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .post-content a:hover {
+            text-decoration: underline;
+        }
+
+        .no-posts {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .post-header,
+            .post-content {
+                padding: 20px;
+            }
+
+            .post-title {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Learner</h1>
+            <p>Insights and summaries from various learning resources</p>
+        </header>
+
+        <div id="loading" class="loading">
+            Loading posts...
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            Failed to load posts. Please try again later.
+        </div>
+
+        <div id="posts-container">
+        </div>
+
+        <div id="no-posts" class="no-posts" style="display: none;">
+            No posts with summaries found.
+        </div>
+    </div>
+
+    <script>
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1a0SeElrZfwZ9w4LtrXAXssaDSDS-ZgKWPhAzi7GkY_U/gviz/tq?tqx=out:json&tq=&gid=0';
+
+        // Global callback function for JSONP
+        window.googleSheetsCallback = function(data) {
+            window.sheetsData = data;
+        };
+
+        function formatDate(dateString) {
+            if (!dateString) return 'No date';
+
+            try {
+                // Handle Google Sheets date format: "Date(2025,10,17)"
+                if (typeof dateString === 'string' && dateString.startsWith('Date(')) {
+                    const match = dateString.match(/Date\((\d+),(\d+),(\d+)\)/);
+                    if (match) {
+                        const year = parseInt(match[1]);
+                        const month = parseInt(match[2]); // Google Sheets months are 0-indexed
+                        const day = parseInt(match[3]);
+                        const date = new Date(year, month, day);
+                        return date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                    }
+                }
+
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        function createPostElement(post) {
+            const postDiv = document.createElement('div');
+            postDiv.className = 'blog-post';
+
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'post-header';
+
+            const titleElement = document.createElement('h1');
+            titleElement.className = 'post-title';
+
+            if (post.videoUrl && post.videoUrl.trim()) {
+                const titleLink = document.createElement('a');
+                titleLink.href = post.videoUrl;
+                titleLink.target = '_blank';
+                titleLink.rel = 'noopener noreferrer';
+                titleLink.textContent = post.title || 'Untitled';
+                titleElement.appendChild(titleLink);
+            } else {
+                titleElement.textContent = post.title || 'Untitled';
+            }
+
+            const dateElement = document.createElement('div');
+            dateElement.className = 'post-date';
+            let dateText = `Added: ${formatDate(post.addedAt)}`;
+            if (post.publishedAt) {
+                dateText += `\nPublished: ${formatDate(post.publishedAt)}`;
+            }
+            dateElement.textContent = dateText;
+
+            const markReadBtn = document.createElement('button');
+            markReadBtn.className = 'mark-read-btn';
+
+            // Initialize button state based on post.isRead
+            if (post.isRead) {
+                markReadBtn.textContent = 'Mark as unread';
+                markReadBtn.classList.add('read');
+                postDiv.classList.add('read', 'collapsed');
+            } else {
+                markReadBtn.textContent = 'Mark as read';
+            }
+
+            markReadBtn.addEventListener('click', function() {
+                toggleReadStatus(postDiv, markReadBtn, post.videoUrl);
+            });
+
+            headerDiv.appendChild(titleElement);
+            headerDiv.appendChild(dateElement);
+            headerDiv.appendChild(markReadBtn);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'post-content';
+
+            try {
+                // Parse markdown to HTML
+                let htmlContent = marked.parse(post.summary || '');
+
+                // Remove the first H1 title from content (it's already in the header)
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlContent;
+                const firstH1 = tempDiv.querySelector('h1');
+                if (firstH1) {
+                    firstH1.remove();
+                }
+                contentDiv.innerHTML = tempDiv.innerHTML;
+            } catch (e) {
+                console.error('Error parsing markdown:', e);
+                // Fallback to plain text with line breaks
+                contentDiv.innerHTML = (post.summary || '').replace(/\n/g, '<br>');
+            }
+
+            postDiv.appendChild(headerDiv);
+            postDiv.appendChild(contentDiv);
+
+            return postDiv;
+        }
+
+        function loadPostsWithJSONP() {
+            return new Promise((resolve, reject) => {
+                // Create a global callback function that Google Sheets will call
+                window.google = window.google || {};
+                window.google.visualization = window.google.visualization || {};
+                window.google.visualization.Query = window.google.visualization.Query || {};
+                window.google.visualization.Query.setResponse = function(response) {
+                    resolve(response);
+                };
+
+                const script = document.createElement('script');
+                script.src = SHEET_URL;
+                script.onerror = () => {
+                    document.head.removeChild(script);
+                    reject(new Error('Failed to load data'));
+                };
+
+                script.onload = () => {
+                    document.head.removeChild(script);
+                };
+
+                document.head.appendChild(script);
+            });
+        }
+
+        async function loadPosts() {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const postsContainer = document.getElementById('posts-container');
+            const noPostsElement = document.getElementById('no-posts');
+
+            try {
+                const data = await loadPostsWithJSONP();
+                loadingElement.style.display = 'none';
+
+                if (!data.table || !data.table.rows) {
+                    throw new Error('Invalid data structure');
+                }
+
+                const rows = data.table.rows;
+                const posts = [];
+
+                // Find column indices
+                const cols = data.table.cols;
+                const columnMap = {};
+                cols.forEach((col, index) => {
+                    if (col.label) {
+                        columnMap[col.label.toLowerCase()] = index;
+                    }
+                });
+
+                const titleIndex = columnMap['video title'] ?? -1;
+                const urlIndex = columnMap['video url'] ?? -1;
+                const dateIndex = columnMap['added at'] ?? -1;
+                const publishedIndex = columnMap['published at'] ?? -1;
+                const summaryIndex = columnMap['summary'] ?? -1;
+                const readIndex = columnMap['read'] ?? -1;
+
+                // Process rows
+                rows.forEach(row => {
+                    if (!row.c) return;
+
+                    const title = titleIndex >= 0 && row.c[titleIndex] ? row.c[titleIndex].v : '';
+                    const videoUrl = urlIndex >= 0 && row.c[urlIndex] ? row.c[urlIndex].v : '';
+                    const addedAt = dateIndex >= 0 && row.c[dateIndex] ? row.c[dateIndex].v : '';
+                    const publishedAt = publishedIndex >= 0 && row.c[publishedIndex] ? row.c[publishedIndex].v : '';
+                    const summary = summaryIndex >= 0 && row.c[summaryIndex] ? row.c[summaryIndex].v : '';
+                    const isRead = readIndex >= 0 && row.c[readIndex] ? (row.c[readIndex].v === 1 || row.c[readIndex].v === '1') : false;
+
+                    // Only include posts with non-empty summaries
+                    if (summary && summary.trim()) {
+                        posts.push({
+                            title: title,
+                            videoUrl: videoUrl,
+                            addedAt: addedAt,
+                            publishedAt: publishedAt,
+                            summary: summary.trim(),
+                            isRead: isRead
+                        });
+                    }
+                });
+
+                if (posts.length === 0) {
+                    noPostsElement.style.display = 'block';
+                    return;
+                }
+
+                // Sort posts by date (newest first)
+                posts.sort((a, b) => {
+                    const dateA = new Date(a.addedAt);
+                    const dateB = new Date(b.addedAt);
+                    return dateB - dateA;
+                });
+
+                // Render posts
+                posts.forEach(post => {
+                    const postElement = createPostElement(post);
+                    postsContainer.appendChild(postElement);
+                });
+
+            } catch (error) {
+                console.error('Error loading posts:', error);
+                loadingElement.style.display = 'none';
+                errorElement.style.display = 'block';
+                errorElement.textContent = `Failed to load posts: ${error.message}`;
+            }
+        }
+
+        function toggleReadStatus(postDiv, button, videoUrl) {
+            const isRead = postDiv.classList.contains('read');
+
+            if (isRead) {
+                // Mark as unread - expand immediately
+                postDiv.classList.remove('read', 'collapsed');
+                button.textContent = 'Mark as read';
+                button.classList.remove('read');
+                // Call webhook for unread (read=0)
+                callWebhook(videoUrl, 0);
+            } else {
+                // Mark as read - collapse immediately
+                postDiv.classList.add('read', 'collapsed');
+                button.textContent = 'Mark as unread';
+                button.classList.add('read');
+                // Call webhook for read (read=1)
+                callWebhook(videoUrl, 1);
+            }
+        }
+
+        function callWebhook(videoUrl, readStatus) {
+            if (!videoUrl) return;
+
+            const webhookUrl = `https://n8n.synergychen.com/webhook/c8115c00-5be7-45c3-88a6-04be9db381f4?url=${encodeURIComponent(videoUrl)}&read=${readStatus}`;
+
+            fetch(webhookUrl, {
+                method: 'GET',
+                mode: 'no-cors' // This allows the request to go through even if CORS is not configured
+            })
+            .then(() => {
+                // Show sync notification on success
+                showSyncNotification();
+            })
+            .catch((error) => {
+                console.error('Webhook call failed:', error);
+                // Still show notification since we can't detect success/failure with no-cors
+                showSyncNotification();
+            });
+        }
+
+        function showSyncNotification() {
+            // Remove any existing notification
+            const existingNotification = document.querySelector('.sync-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            // Create new notification
+            const notification = document.createElement('div');
+            notification.className = 'sync-notification';
+            notification.textContent = 'Synced';
+            document.body.appendChild(notification);
+
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            // Hide and remove notification after 1 second
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 1000);
+        }
+
+        // Load posts when page loads
+        document.addEventListener('DOMContentLoaded', loadPosts);
+    </script>
+</body>
+</html>
