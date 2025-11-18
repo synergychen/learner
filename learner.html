@@ -87,7 +87,15 @@
         .post-header {
             padding: 25px 30px 20px;
             border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            position: relative;
         }
+
+        .post-header:hover {
+            background-color: #f8f9fa;
+        }
+
 
         .post-title {
             font-size: 1.8rem;
@@ -376,13 +384,24 @@
             if (post.isRead) {
                 markReadBtn.textContent = 'Mark as unread';
                 markReadBtn.classList.add('read');
-                postDiv.classList.add('read', 'collapsed');
+                postDiv.classList.add('read');
+                // Read posts start collapsed
+                postDiv.classList.add('collapsed');
             } else {
                 markReadBtn.textContent = 'Mark as read';
             }
 
             markReadBtn.addEventListener('click', function() {
                 toggleReadStatus(postDiv, markReadBtn, post.videoUrl);
+            });
+
+            // Add click handler to header for collapse/expand
+            headerDiv.addEventListener('click', function(e) {
+                // Don't trigger if clicking on the mark read button
+                if (e.target === markReadBtn) {
+                    return;
+                }
+                toggleCollapse(postDiv);
             });
 
             headerDiv.appendChild(titleElement);
@@ -524,19 +543,23 @@
             }
         }
 
+        function toggleCollapse(postDiv) {
+            postDiv.classList.toggle('collapsed');
+        }
+
         function toggleReadStatus(postDiv, button, videoUrl) {
             const isRead = postDiv.classList.contains('read');
 
             if (isRead) {
-                // Mark as unread - expand immediately
-                postDiv.classList.remove('read', 'collapsed');
+                // Mark as unread - don't change collapse state
+                postDiv.classList.remove('read');
                 button.textContent = 'Mark as read';
                 button.classList.remove('read');
                 // Call webhook for unread (read=0)
                 callWebhook(videoUrl, 0);
             } else {
-                // Mark as read - collapse immediately
-                postDiv.classList.add('read', 'collapsed');
+                // Mark as read - don't change collapse state
+                postDiv.classList.add('read');
                 button.textContent = 'Mark as unread';
                 button.classList.add('read');
                 // Call webhook for read (read=1)
