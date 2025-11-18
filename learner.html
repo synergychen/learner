@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learner</title>
-    <link rel="icon" type="image/jpeg" href="https://i.imgur.com/UCdc0j4.jpg">
-    <link rel="apple-touch-icon" href="https://i.imgur.com/UCdc0j4.jpg">
+    <link rel="icon" type="image/png" href="https://i.imgur.com/EpxqBgE.png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/EpxqBgE.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Learner">
@@ -133,6 +133,50 @@
             padding: 10px 0;
             z-index: 100;
             border-bottom: 1px solid #eee;
+        }
+
+        .highlight {
+            background-color: #fff3cd;
+            border-radius: 2px;
+            padding: 1px 2px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .highlight:hover {
+            background-color: #ffeaa7;
+        }
+
+        .highlight-tooltip {
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            user-select: none;
+        }
+
+        .highlight-tooltip:hover {
+            background: #667eea;
+        }
+
+        .highlight-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .highlight-tooltip:hover::after {
+            border-color: #667eea transparent transparent transparent;
         }
 
         .search-container {
@@ -839,11 +883,258 @@
             });
         }
 
+        // Text highlighting functionality
+        function setupTextHighlighting() {
+            let tooltip = null;
+
+            document.addEventListener('mouseup', function(e) {
+                // Small delay to ensure selection is complete
+                setTimeout(() => {
+                    const selection = window.getSelection();
+                    const selectedText = selection.toString().trim();
+
+                    console.log('Selection detected:', selectedText); // Debug log
+
+                    // Remove existing tooltip
+                    if (tooltip) {
+                        tooltip.remove();
+                        tooltip = null;
+                    }
+
+                    // Only show tooltip if text is selected and it's within post content
+                    if (selectedText && selection.rangeCount > 0 && selectedText.length > 2) {
+                        const range = selection.getRangeAt(0);
+                        const container = range.commonAncestorContainer;
+
+                        // Check if selection is within post content
+                        let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+                        const postContent = element.closest('.post-content');
+
+                        console.log('Post content found:', !!postContent); // Debug log
+
+                        if (postContent) {
+                            showHighlightTooltip(range);
+                        }
+                    }
+                }, 10);
+            });
+
+            // Hide tooltip when clicking elsewhere
+            document.addEventListener('mousedown', function(e) {
+                if (tooltip && !tooltip.contains(e.target)) {
+                    tooltip.remove();
+                    tooltip = null;
+                }
+            });
+
+            function showHighlightTooltip(range) {
+                tooltip = document.createElement('div');
+                tooltip.className = 'highlight-tooltip';
+                tooltip.textContent = 'Highlight';
+
+                // Position tooltip above the selection
+                const rect = range.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                tooltip.style.position = 'absolute';
+                tooltip.style.left = Math.max(10, rect.left + rect.width / 2) + 'px';
+                tooltip.style.top = (rect.top + scrollTop - 45) + 'px';
+                tooltip.style.transform = 'translateX(-50%)';
+
+                console.log('Tooltip positioned at:', tooltip.style.left, tooltip.style.top); // Debug log
+
+                document.body.appendChild(tooltip);
+
+                tooltip.addEventListener('click', function() {
+                    highlightSelection(range);
+                    tooltip.remove();
+                    tooltip = null;
+                    window.getSelection().removeAllRanges();
+                });
+            }
+
+            function highlightSelection(range) {
+                try {
+                    // Check if selection spans across different block elements (like list items)
+                    const startContainer = range.startContainer;
+                    const endContainer = range.endContainer;
+
+                    // Get the closest block elements
+                    const startBlock = getClosestBlockElement(startContainer);
+                    const endBlock = getClosestBlockElement(endContainer);
+
+                    // If selection spans across different block elements, highlight each separately
+                    if (startBlock !== endBlock) {
+                        console.log('Selection spans across different block elements, highlighting each separately');
+                        highlightAcrossBlocks(range);
+                        return;
+                    }
+
+                    // Check if we're inside a list item and the selection is complex
+                    const listItem = range.commonAncestorContainer.nodeType === Node.TEXT_NODE ?
+                        range.commonAncestorContainer.parentElement.closest('li') :
+                        range.commonAncestorContainer.closest('li');
+
+                    if (listItem) {
+                        // For list items, use a safer highlighting approach
+                        highlightInListItem(range);
+                    } else {
+                        // Standard highlighting for regular text
+                        const contents = range.extractContents();
+                        const span = document.createElement('span');
+                        span.className = 'highlight';
+                        span.appendChild(contents);
+                        range.insertNode(span);
+
+                        addRemoveHighlightHandler(span);
+                    }
+                } catch (error) {
+                    console.error('Error highlighting text:', error);
+                }
+            }
+
+            function highlightAcrossBlocks(range) {
+                // Get all text nodes within the selection
+                const walker = document.createTreeWalker(
+                    range.commonAncestorContainer,
+                    NodeFilter.SHOW_TEXT,
+                    {
+                        acceptNode: function(node) {
+                            // Only include text nodes that are within the selection
+                            const nodeRange = document.createRange();
+                            nodeRange.selectNodeContents(node);
+
+                            // Check if this text node intersects with our selection
+                            if (range.intersectsNode(node)) {
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                    }
+                );
+
+                const textNodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    textNodes.push(node);
+                }
+
+                // Process each text node that intersects with the selection
+                textNodes.forEach(textNode => {
+                    const blockElement = getClosestBlockElement(textNode);
+                    if (!blockElement) return;
+
+                    // Create a range for this specific text node
+                    const nodeRange = document.createRange();
+                    nodeRange.selectNodeContents(textNode);
+
+                    // Find the intersection with the original selection
+                    const intersectionRange = document.createRange();
+
+                    // Determine start and end points for this text node
+                    let startOffset = 0;
+                    let endOffset = textNode.textContent.length;
+
+                    // If this is the start node, use the selection's start offset
+                    if (textNode === range.startContainer) {
+                        startOffset = range.startOffset;
+                    }
+
+                    // If this is the end node, use the selection's end offset
+                    if (textNode === range.endContainer) {
+                        endOffset = range.endOffset;
+                    }
+
+                    // Only highlight if there's actual text to highlight
+                    if (startOffset < endOffset) {
+                        intersectionRange.setStart(textNode, startOffset);
+                        intersectionRange.setEnd(textNode, endOffset);
+
+                        // Highlight this portion
+                        highlightSingleRange(intersectionRange);
+                    }
+                });
+            }
+
+            function highlightSingleRange(range) {
+                try {
+                    const contents = range.extractContents();
+                    const span = document.createElement('span');
+                    span.className = 'highlight';
+                    span.appendChild(contents);
+                    range.insertNode(span);
+
+                    addRemoveHighlightHandler(span);
+                } catch (error) {
+                    console.error('Error highlighting single range:', error);
+                }
+            }
+
+            function getClosestBlockElement(node) {
+                const blockElements = ['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE'];
+                let current = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+
+                while (current && current !== document.body) {
+                    if (blockElements.includes(current.tagName)) {
+                        return current;
+                    }
+                    current = current.parentElement;
+                }
+                return null;
+            }
+
+            function highlightInListItem(range) {
+                // For list items, we'll wrap the text more carefully
+                const selection = range.toString();
+                const startOffset = range.startOffset;
+                const endOffset = range.endOffset;
+                const container = range.startContainer;
+
+                if (container.nodeType === Node.TEXT_NODE && range.startContainer === range.endContainer) {
+                    // Simple case: selection within a single text node
+                    const textNode = container;
+                    const beforeText = textNode.textContent.substring(0, startOffset);
+                    const selectedText = textNode.textContent.substring(startOffset, endOffset);
+                    const afterText = textNode.textContent.substring(endOffset);
+
+                    // Create new nodes
+                    const beforeNode = document.createTextNode(beforeText);
+                    const highlightSpan = document.createElement('span');
+                    highlightSpan.className = 'highlight';
+                    highlightSpan.textContent = selectedText;
+                    const afterNode = document.createTextNode(afterText);
+
+                    // Replace the original text node
+                    const parent = textNode.parentNode;
+                    parent.insertBefore(beforeNode, textNode);
+                    parent.insertBefore(highlightSpan, textNode);
+                    parent.insertBefore(afterNode, textNode);
+                    parent.removeChild(textNode);
+
+                    addRemoveHighlightHandler(highlightSpan);
+                } else {
+                    console.log('Complex list selection, skipping highlight to preserve structure');
+                }
+            }
+
+            function addRemoveHighlightHandler(span) {
+                span.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const parent = span.parentNode;
+                    const textContent = span.textContent;
+                    const textNode = document.createTextNode(textContent);
+                    parent.replaceChild(textNode, span);
+                    parent.normalize(); // Merge adjacent text nodes
+                });
+            }
+        }
+
         // Load posts when page loads
         document.addEventListener('DOMContentLoaded', function() {
             loadPosts().then(() => {
                 setupSearch();
                 setupCollapseAll();
+                setupTextHighlighting();
             });
         });
     </script>
