@@ -257,15 +257,37 @@
             background: #667eea;
             color: white;
             border: none;
-            padding: 10px 15px;
+            padding: 10px 12px;
             border-radius: 4px;
             font-size: 0.8rem;
             cursor: pointer;
             transition: background-color 0.2s ease;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .collapse-all-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .sync-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sync-btn:hover {
             background: #5a6fd8;
         }
 
@@ -475,7 +497,18 @@
             <div class="search-container">
                 <input type="text" class="search-bar" id="search-bar" placeholder="Search posts...">
             </div>
-            <button class="collapse-all-btn" id="collapse-all-btn">Collapse All</button>
+            <button class="collapse-all-btn" id="collapse-all-btn" title="Collapse All">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 15L12 9L6 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <button class="sync-btn" id="sync-btn" title="Refresh page">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M23 20V14H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M3.51 15A9 9 0 0 0 18.36 18.36L23 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
         </div>
 
         <div class="sticky-title" id="sticky-title"></div>
@@ -923,6 +956,21 @@
             const postsContainer = document.getElementById('posts-container');
             let allCollapsed = false;
 
+            function updateIcon() {
+                const svg = collapseAllBtn.querySelector('svg');
+                const path = svg.querySelector('path');
+
+                if (allCollapsed) {
+                    // Show down arrow for expand
+                    path.setAttribute('d', 'M6 9L12 15L18 9');
+                    collapseAllBtn.setAttribute('title', 'Expand All');
+                } else {
+                    // Show up arrow for collapse
+                    path.setAttribute('d', 'M18 15L12 9L6 15');
+                    collapseAllBtn.setAttribute('title', 'Collapse All');
+                }
+            }
+
             collapseAllBtn.addEventListener('click', function() {
                 const posts = postsContainer.querySelectorAll('.blog-post');
 
@@ -931,17 +979,20 @@
                     posts.forEach(post => {
                         post.classList.remove('collapsed');
                     });
-                    this.textContent = 'Collapse All';
                     allCollapsed = false;
                 } else {
                     // Collapse all
                     posts.forEach(post => {
                         post.classList.add('collapsed');
                     });
-                    this.textContent = 'Expand All';
                     allCollapsed = true;
                 }
+
+                updateIcon();
             });
+
+            // Initialize with correct icon
+            updateIcon();
         }
 
         // Text highlighting functionality
@@ -1254,6 +1305,22 @@
             });
         }
 
+        // Sync/refresh functionality
+        function setupSync() {
+            const syncBtn = document.getElementById('sync-btn');
+
+            syncBtn.addEventListener('click', function() {
+                // Add a brief loading state
+                syncBtn.style.opacity = '0.6';
+                syncBtn.style.pointerEvents = 'none';
+
+                // Refresh the page after a short delay for visual feedback
+                setTimeout(() => {
+                    window.location.reload();
+                }, 200);
+            });
+        }
+
         // Load posts when page loads
         document.addEventListener('DOMContentLoaded', function() {
             loadPosts().then(() => {
@@ -1262,6 +1329,7 @@
                 setupTextHighlighting();
                 setupScrollToTop();
                 setupStickyTitles();
+                setupSync();
             });
         });
     </script>
