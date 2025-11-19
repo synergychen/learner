@@ -30,22 +30,6 @@
             padding: 20px;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-
-        header h1 {
-            font-size: 2.2rem;
-            margin-bottom: 5px;
-            font-weight: 700;
-        }
-
         header p {
             font-size: 1.1rem;
             opacity: 0.9;
@@ -127,12 +111,23 @@
             align-items: center;
             margin-bottom: 15px;
             flex-wrap: wrap;
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
             background-color: #f8f9fa;
-            padding: 10px 0;
+            padding: 15px 20px;
             z-index: 100;
             border-bottom: 1px solid #eee;
+            transition: transform 0.3s ease;
+        }
+
+        .controls.hidden {
+            transform: translateY(-100%);
+        }
+
+        .main-content {
+            margin-top: 60px;
         }
 
         .highlight {
@@ -448,18 +443,6 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Learner</h1>
-        </header>
-
-        <div id="loading" class="loading">
-            Loading posts...
-        </div>
-
-        <div id="error" class="error" style="display: none;">
-            Failed to load posts. Please try again later.
-        </div>
-
         <div class="controls">
             <div class="search-container">
                 <input type="text" class="search-bar" id="search-bar" placeholder="Search posts...">
@@ -467,11 +450,21 @@
             <button class="collapse-all-btn" id="collapse-all-btn">Collapse All</button>
         </div>
 
-        <div id="posts-container">
-        </div>
+        <div class="main-content">
+            <div id="loading" class="loading">
+                Loading posts...
+            </div>
 
-        <div id="no-posts" class="no-posts" style="display: none;">
-            No posts with summaries found.
+            <div id="error" class="error" style="display: none;">
+                Failed to load posts. Please try again later.
+            </div>
+
+            <div id="posts-container">
+            </div>
+
+            <div id="no-posts" class="no-posts" style="display: none;">
+                No posts with summaries found.
+            </div>
         </div>
     </div>
 
@@ -1167,16 +1160,19 @@
             }
         }
 
-        // Scroll to top functionality
+        // Scroll to top functionality and search bar hide/show
         function setupScrollToTop() {
             const scrollToTopBtn = document.getElementById('scroll-to-top');
+            const controls = document.querySelector('.controls');
 
-            // Show/hide button based on scroll position
+            // Show/hide button and search bar based on scroll position
             window.addEventListener('scroll', function() {
                 if (window.pageYOffset > 300) {
                     scrollToTopBtn.classList.add('show');
+                    controls.classList.add('hidden');
                 } else {
                     scrollToTopBtn.classList.remove('show');
+                    controls.classList.remove('hidden');
                 }
             });
 
