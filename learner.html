@@ -91,6 +91,8 @@
             cursor: pointer;
             margin-top: 20px;
             transition: background-color 0.2s ease;
+            display: block;
+            margin-left: auto;
         }
 
         .mark-read-btn-bottom:hover {
@@ -111,23 +113,9 @@
             align-items: center;
             margin-bottom: 15px;
             flex-wrap: wrap;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
             background-color: #f8f9fa;
             padding: 15px 20px;
-            z-index: 100;
             border-bottom: 1px solid #eee;
-            transition: transform 0.3s ease;
-        }
-
-        .controls.hidden {
-            transform: translateY(-100%);
-        }
-
-        .main-content {
-            margin-top: 60px;
         }
 
         .sticky-title {
@@ -608,23 +596,12 @@
             }
             dateElement.textContent = dateText;
 
-            const markReadBtn = document.createElement('button');
-            markReadBtn.className = 'mark-read-btn';
-
-            // Initialize button state based on post.isRead
+            // Initialize post state based on post.isRead
             if (post.isRead) {
-                markReadBtn.textContent = 'Mark as unread';
-                markReadBtn.classList.add('read');
                 postDiv.classList.add('read');
                 // Read posts start collapsed
                 postDiv.classList.add('collapsed');
-            } else {
-                markReadBtn.textContent = 'Mark as read';
             }
-
-            markReadBtn.addEventListener('click', function() {
-                toggleReadStatus(postDiv, markReadBtn, post.videoUrl);
-            });
 
             // Create bottom mark read button
             const markReadBtnBottom = document.createElement('button');
@@ -639,13 +616,13 @@
             }
 
             markReadBtnBottom.addEventListener('click', function() {
-                toggleReadStatusNoCollapse(postDiv, markReadBtnBottom, post.videoUrl);
+                toggleReadStatus(postDiv, markReadBtnBottom, post.videoUrl);
             });
 
             // Add click handler to header for collapse/expand
             headerDiv.addEventListener('click', function(e) {
-                // Don't trigger if clicking on either mark read button
-                if (e.target === markReadBtn || e.target === markReadBtnBottom) {
+                // Don't trigger if clicking on the bottom mark read button
+                if (e.target === markReadBtnBottom) {
                     return;
                 }
                 toggleCollapse(postDiv);
@@ -653,7 +630,6 @@
 
             headerDiv.appendChild(titleElement);
             headerDiv.appendChild(dateElement);
-            headerDiv.appendChild(markReadBtn);
 
             const contentDiv = document.createElement('div');
             contentDiv.className = 'post-content';
@@ -803,8 +779,7 @@
 
             if (currentIndex >= 0 && currentIndex < allPosts.length - 1) {
                 const nextPost = allPosts[currentIndex + 1];
-                const controlsHeight = 60; // Height of search bar area
-                const offset = nextPost.offsetTop - controlsHeight - 20; // 20px extra padding
+                const offset = nextPost.offsetTop - 20; // 20px extra padding
 
                 window.scrollTo({
                     top: offset,
@@ -816,19 +791,14 @@
         function toggleReadStatus(postDiv, button, videoUrl) {
             const isRead = postDiv.classList.contains('read');
 
-            // Find both buttons to sync them
-            const topButton = postDiv.querySelector('.mark-read-btn');
+            // Find the bottom button
             const bottomButton = postDiv.querySelector('.mark-read-btn-bottom');
 
             if (isRead) {
                 // Mark as unread - force expand
                 postDiv.classList.remove('read', 'collapsed');
 
-                // Update both buttons
-                if (topButton) {
-                    topButton.textContent = 'Mark as read';
-                    topButton.classList.remove('read');
-                }
+                // Update button
                 if (bottomButton) {
                     bottomButton.textContent = 'Mark as read';
                     bottomButton.classList.remove('read');
@@ -840,11 +810,7 @@
                 // Mark as read - force collapse
                 postDiv.classList.add('read', 'collapsed');
 
-                // Update both buttons
-                if (topButton) {
-                    topButton.textContent = 'Mark as unread';
-                    topButton.classList.add('read');
-                }
+                // Update button
                 if (bottomButton) {
                     bottomButton.textContent = 'Mark as unread';
                     bottomButton.classList.add('read');
@@ -1267,19 +1233,16 @@
             }
         }
 
-        // Scroll to top functionality and search bar hide/show
+        // Scroll to top functionality
         function setupScrollToTop() {
             const scrollToTopBtn = document.getElementById('scroll-to-top');
-            const controls = document.querySelector('.controls');
 
-            // Show/hide button and search bar based on scroll position
+            // Show/hide button based on scroll position
             window.addEventListener('scroll', function() {
                 if (window.pageYOffset > 300) {
                     scrollToTopBtn.classList.add('show');
-                    controls.classList.add('hidden');
                 } else {
                     scrollToTopBtn.classList.remove('show');
-                    controls.classList.remove('hidden');
                 }
             });
 
@@ -1301,7 +1264,6 @@
 
             window.addEventListener('scroll', function() {
                 const scrollTop = window.pageYOffset;
-                const controlsHeight = 60; // Height of search bar area
 
                 let currentPost = null;
 
@@ -1311,8 +1273,8 @@
                     const postTop = post.offsetTop;
                     const postBottom = postTop + post.offsetHeight;
 
-                    // Check if post is in the viewport (accounting for controls height)
-                    if (scrollTop + controlsHeight >= postTop && scrollTop + controlsHeight < postBottom) {
+                    // Check if post is in the viewport
+                    if (scrollTop >= postTop && scrollTop < postBottom) {
                         currentPost = post;
                         break;
                     }
