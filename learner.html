@@ -797,6 +797,22 @@
             postDiv.classList.toggle('collapsed');
         }
 
+        function scrollToNextPost(currentPostDiv) {
+            const allPosts = document.querySelectorAll('.blog-post');
+            const currentIndex = Array.from(allPosts).indexOf(currentPostDiv);
+
+            if (currentIndex >= 0 && currentIndex < allPosts.length - 1) {
+                const nextPost = allPosts[currentIndex + 1];
+                const controlsHeight = 60; // Height of search bar area
+                const offset = nextPost.offsetTop - controlsHeight - 20; // 20px extra padding
+
+                window.scrollTo({
+                    top: offset,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
         function toggleReadStatus(postDiv, button, videoUrl) {
             const isRead = postDiv.classList.contains('read');
 
@@ -836,6 +852,11 @@
 
                 // Call webhook for read (read=1)
                 callWebhook(videoUrl, 1);
+
+                // Scroll to next post after marking as read
+                setTimeout(() => {
+                    scrollToNextPost(postDiv);
+                }, 300); // Small delay to allow collapse animation
             }
         }
 
@@ -878,6 +899,11 @@
 
                 // Call webhook for read (read=1)
                 callWebhook(videoUrl, 1);
+
+                // Scroll to next post after marking as read
+                setTimeout(() => {
+                    scrollToNextPost(postDiv);
+                }, 100); // Shorter delay since no collapse animation
             }
         }
 
