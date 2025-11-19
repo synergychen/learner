@@ -130,6 +130,36 @@
             margin-top: 60px;
         }
 
+        .sticky-title {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(248, 249, 250, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            z-index: 99;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sticky-title.show {
+            transform: translateY(0);
+        }
+
+        .post-header {
+            position: sticky;
+            top: 0;
+            z-index: 98;
+        }
+
         .highlight {
             background-color: #fff3cd;
             border-radius: 2px;
@@ -449,6 +479,8 @@
             </div>
             <button class="collapse-all-btn" id="collapse-all-btn">Collapse All</button>
         </div>
+
+        <div class="sticky-title" id="sticky-title"></div>
 
         <div class="main-content">
             <div id="loading" class="loading">
@@ -1185,6 +1217,45 @@
             });
         }
 
+        // Sticky post title functionality
+        function setupStickyTitles() {
+            const stickyTitle = document.getElementById('sticky-title');
+            const posts = document.querySelectorAll('.blog-post');
+
+            if (posts.length === 0) return;
+
+            window.addEventListener('scroll', function() {
+                const scrollTop = window.pageYOffset;
+                const controlsHeight = 60; // Height of search bar area
+
+                let currentPost = null;
+
+                // Find which post is currently in view
+                for (let i = 0; i < posts.length; i++) {
+                    const post = posts[i];
+                    const postTop = post.offsetTop;
+                    const postBottom = postTop + post.offsetHeight;
+
+                    // Check if post is in the viewport (accounting for controls height)
+                    if (scrollTop + controlsHeight >= postTop && scrollTop + controlsHeight < postBottom) {
+                        currentPost = post;
+                        break;
+                    }
+                }
+
+                // Show/hide sticky title based on scroll position and current post
+                if (currentPost && scrollTop > 100) {
+                    const titleElement = currentPost.querySelector('.post-title');
+                    if (titleElement) {
+                        stickyTitle.textContent = titleElement.textContent;
+                        stickyTitle.classList.add('show');
+                    }
+                } else {
+                    stickyTitle.classList.remove('show');
+                }
+            });
+        }
+
         // Load posts when page loads
         document.addEventListener('DOMContentLoaded', function() {
             loadPosts().then(() => {
@@ -1192,6 +1263,7 @@
                 setupCollapseAll();
                 setupTextHighlighting();
                 setupScrollToTop();
+                setupStickyTitles();
             });
         });
     </script>
