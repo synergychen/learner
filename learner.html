@@ -133,6 +133,11 @@
             transform: translateY(-100%);
             transition: transform 0.3s ease;
             line-height: 1.3;
+            cursor: pointer;
+        }
+
+        .sticky-title:hover {
+            background: linear-gradient(135deg, rgba(90, 111, 216, 0.95) 0%, rgba(102, 65, 142, 0.95) 100%);
         }
 
         .sticky-title.show {
@@ -1258,13 +1263,14 @@
         function setupStickyTitles() {
             const stickyTitle = document.getElementById('sticky-title');
             const posts = document.querySelectorAll('.blog-post');
+            let currentPost = null;
 
             if (posts.length === 0) return;
 
             window.addEventListener('scroll', function() {
                 const scrollTop = window.pageYOffset;
 
-                let currentPost = null;
+                currentPost = null;
 
                 // Find which post is currently in view
                 for (let i = 0; i < posts.length; i++) {
@@ -1288,6 +1294,17 @@
                     }
                 } else {
                     stickyTitle.classList.remove('show');
+                }
+            });
+
+            // Add click handler to scroll to beginning of current post
+            stickyTitle.addEventListener('click', function() {
+                if (currentPost) {
+                    const offset = currentPost.offsetTop - 20; // 20px padding from top
+                    window.scrollTo({
+                        top: offset,
+                        behavior: 'smooth'
+                    });
                 }
             });
         }
