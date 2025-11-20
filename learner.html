@@ -282,6 +282,34 @@
             background: #5a6fd8;
         }
 
+        .listen-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+        }
+
+        .listen-btn:hover {
+            background: #218838;
+        }
+
+        .listen-btn.playing {
+            background: #dc3545;
+        }
+
+        .listen-btn.playing:hover {
+            background: #c82333;
+        }
+
         .post-header {
             padding: 25px 30px 20px;
             border-bottom: 1px solid #eee;
@@ -624,14 +652,38 @@
 
             // Add click handler to header for collapse/expand
             headerDiv.addEventListener('click', function(e) {
-                // Don't trigger if clicking on the bottom mark read button
-                if (e.target === markReadBtnBottom) {
+                // Don't trigger if clicking on buttons
+                if (e.target === markReadBtnBottom || e.target === listenBtn || e.target.closest('.listen-btn')) {
                     return;
                 }
                 toggleCollapse(postDiv);
             });
 
             headerDiv.appendChild(titleElement);
+
+            // Create listen button
+            const listenBtn = document.createElement('button');
+            listenBtn.className = 'listen-btn';
+            listenBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                </svg>
+            `;
+
+            // Store post data and speech state on the button
+            listenBtn.postData = post;
+            listenBtn.speechState = {
+                speech: null,
+                isPlaying: false
+            };
+
+            // Add click handler for listen functionality
+            listenBtn.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent header click event
+                toggleSpeech(listenBtn);
+            });
+
+            headerDiv.appendChild(listenBtn);
             headerDiv.appendChild(dateElement);
 
             const contentDiv = document.createElement('div');
@@ -1327,6 +1379,95 @@
                     window.location.reload();
                 }, 200);
             });
+        }
+
+        // Speech synthesis functionality
+        function toggleSpeech(button) {
+            const speechState = button.speechState;
+
+            // Stop all other playing audio first
+            stopAllOtherAudio(button);
+
+            if (speechState.isPlaying) {
+                // Pause current audio
+                if (speechState.speech) {
+                    speechSynthesis.cancel();
+                    resetButton(button);
+                }
+            } else {
+                // Start new speech - get text content from post content div, excluding tables
+                const postElement = button.closest('.blog-post');
+                const contentDiv = postElement.querySelector('.post-content');
+                let textToSpeak = 'Overview.';
+
+                if (contentDiv) {
+                    // Clone the content to avoid modifying the original
+                    const contentClone = contentDiv.cloneNode(true);
+
+                    // Remove all tables from the clone
+                    const tables = contentClone.querySelectorAll('table');
+                    tables.forEach(table => table.remove());
+
+                    // Get the text content after removing tables
+                    const contentText = contentClone.textContent || contentClone.innerText || '';
+                    textToSpeak = `Overview. ${contentText.trim()}`;
+                }
+
+                const speech = new SpeechSynthesisUtterance(textToSpeak);
+
+                // Configure speech
+                speech.rate = 1.0;
+                speech.pitch = 1.0;
+                speech.volume = 1.0;
+
+                // Update button state
+                speechState.speech = speech;
+                speechState.isPlaying = true;
+                button.classList.add('playing');
+                button.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                        <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                    </svg>
+                `;
+
+                // Handle speech end
+                speech.onend = function() {
+                    resetButton(button);
+                };
+
+                // Handle speech error
+                speech.onerror = function() {
+                    resetButton(button);
+                };
+
+                // Start speaking
+                speechSynthesis.speak(speech);
+            }
+        }
+
+        function stopAllOtherAudio(currentButton) {
+            // Find all listen buttons and stop their audio
+            const allListenButtons = document.querySelectorAll('.listen-btn');
+            allListenButtons.forEach(button => {
+                if (button !== currentButton && button.speechState && button.speechState.isPlaying) {
+                    speechSynthesis.cancel();
+                    resetButton(button);
+                }
+            });
+        }
+
+        function resetButton(button) {
+            if (button.speechState) {
+                button.speechState.speech = null;
+                button.speechState.isPlaying = false;
+            }
+            button.classList.remove('playing');
+            button.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                </svg>
+            `;
         }
 
         // Load posts when page loads
