@@ -283,10 +283,10 @@
         }
 
         .listen-btn {
-            background: #28a745;
+            background: #667eea;
             color: white;
             border: none;
-            padding: 8px;
+            padding: 6px;
             border-radius: 50%;
             cursor: pointer;
             transition: background-color 0.2s ease;
@@ -294,20 +294,20 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
+            width: 26px;
+            height: 26px;
         }
 
         .listen-btn:hover {
-            background: #218838;
+            background: #5a6fd8;
         }
 
         .listen-btn.playing {
-            background: #dc3545;
+            background: #5a6fd8;
         }
 
         .listen-btn.playing:hover {
-            background: #c82333;
+            background: #4c63d2;
         }
 
         .post-header {
@@ -665,7 +665,7 @@
             const listenBtn = document.createElement('button');
             listenBtn.className = 'listen-btn';
             listenBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <polygon points="5,3 19,12 5,21" fill="currentColor"/>
                 </svg>
             `;
@@ -1425,7 +1425,7 @@
                 speechState.isPlaying = true;
                 button.classList.add('playing');
                 button.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
                         <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
                     </svg>
@@ -1464,7 +1464,7 @@
             }
             button.classList.remove('playing');
             button.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <polygon points="5,3 19,12 5,21" fill="currentColor"/>
                 </svg>
             `;
