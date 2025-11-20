@@ -1271,16 +1271,21 @@
 
                 currentPost = null;
 
-                // Find which post is currently in view
+                // Calculate the bottom position of the sticky header
+                // Sticky header height is approximately 60px (15px padding top + 15px padding bottom + text height)
+                const stickyHeaderHeight = 60;
+                const stickyBottomPosition = scrollTop + stickyHeaderHeight;
+
+                // Find which post the bottom of the sticky header overlays with
                 for (let i = 0; i < posts.length; i++) {
                     const post = posts[i];
                     const postTop = post.offsetTop;
                     const postBottom = postTop + post.offsetHeight;
 
-                    // Check if post is in the viewport
-                    if (scrollTop >= postTop && scrollTop < postBottom) {
+                    // Check if the bottom of the sticky header is within this post's boundaries
+                    if (stickyBottomPosition >= postTop && stickyBottomPosition <= postBottom) {
                         currentPost = post;
-                        break;
+                        break; // Found the post, no need to check others
                     }
                 }
 
