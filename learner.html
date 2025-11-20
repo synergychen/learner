@@ -297,6 +297,209 @@
             justify-content: center;
         }
 
+        .hamburger-menu:hover {
+            background: #5a6fd8;
+        }
+
+        /* Hamburger Menu Sidebar */
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .menu-sidebar {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100%;
+            background: white;
+            z-index: 1001;
+            transition: left 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .menu-sidebar.active {
+            left: 0;
+        }
+
+        .menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .menu-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .menu-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 5px;
+        }
+
+        .menu-close:hover {
+            color: #333;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+
+        .menu-item:hover {
+            background: #f8f9fa;
+            margin: 0 -20px;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .menu-item-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .theme-toggle.dark {
+            background: #667eea;
+        }
+
+        .theme-toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle.dark .theme-toggle-slider {
+            transform: translateX(26px);
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .container {
+            background: #1a1a1a;
+        }
+
+        body.dark-mode .controls {
+            background: #2d2d2d;
+            border-bottom: 1px solid #444;
+        }
+
+        body.dark-mode .search-bar {
+            background: #333;
+            border: 1px solid #555;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .search-bar::placeholder {
+            color: #999;
+        }
+
+        body.dark-mode .blog-post {
+            background: #2d2d2d;
+            border: 1px solid #444;
+        }
+
+        body.dark-mode .post-header {
+            border-bottom: 1px solid #444;
+        }
+
+        body.dark-mode .post-header:hover {
+            background: #333;
+        }
+
+        body.dark-mode .post-title a {
+            color: #4da6ff;
+        }
+
+        body.dark-mode .post-date {
+            color: #999;
+        }
+
+        body.dark-mode .post-content {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .menu-sidebar {
+            background: #2d2d2d;
+        }
+
+        body.dark-mode .menu-title {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .menu-close {
+            color: #999;
+        }
+
+        body.dark-mode .menu-close:hover {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .menu-item:hover {
+            background: #333;
+        }
+
+        body.dark-mode .menu-item-label {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .menu-header {
+            border-bottom: 1px solid #444;
+        }
+
+        body.dark-mode .menu-item {
+            border-bottom: 1px solid #444;
+        }
+
         .listen-btn {
             background: #667eea;
             color: white;
@@ -541,13 +744,36 @@
                     <path d="M18 15L12 9L6 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </button>
-            <button class="sync-btn" id="sync-btn" title="Refresh page">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M23 20V14H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M3.51 15A9 9 0 0 0 18.36 18.36L23 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
+        </div>
+
+        <!-- Hamburger Menu -->
+        <div class="menu-overlay" id="menu-overlay"></div>
+        <div class="menu-sidebar" id="menu-sidebar">
+            <div class="menu-header">
+                <div class="menu-title">Settings</div>
+                <button class="menu-close" id="menu-close">&times;</button>
+            </div>
+            <div class="menu-item" id="theme-toggle-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Dark Mode
+                </div>
+                <div class="theme-toggle" id="theme-toggle">
+                    <div class="theme-toggle-slider"></div>
+                </div>
+            </div>
+            <div class="menu-item" id="sync-menu-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M23 20V14H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M3.51 15A9 9 0 0 0 18.36 18.36L23 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Sync
+                </div>
+            </div>
         </div>
 
         <div class="sticky-title" id="sticky-title"></div>
@@ -1488,21 +1714,7 @@
             });
         }
 
-        // Sync/refresh functionality
-        function setupSync() {
-            const syncBtn = document.getElementById('sync-btn');
-
-            syncBtn.addEventListener('click', function() {
-                // Add a brief loading state
-                syncBtn.style.opacity = '0.6';
-                syncBtn.style.pointerEvents = 'none';
-
-                // Refresh the page after a short delay for visual feedback
-                setTimeout(() => {
-                    window.location.reload();
-                }, 200);
-            });
-        }
+        // Sync functionality is now handled in hamburger menu
 
         // Speech synthesis functionality
         function toggleSpeech(button) {
@@ -1621,6 +1833,69 @@
             }
         }
 
+        // Hamburger menu functionality
+        function setupHamburgerMenu() {
+            const hamburgerBtn = document.getElementById('hamburger-menu');
+            const menuOverlay = document.getElementById('menu-overlay');
+            const menuSidebar = document.getElementById('menu-sidebar');
+            const menuClose = document.getElementById('menu-close');
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeToggleItem = document.getElementById('theme-toggle-item');
+            const syncMenuItem = document.getElementById('sync-menu-item');
+
+            // Load saved theme
+            const savedTheme = localStorage.getItem('learner_theme') || 'light';
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                themeToggle.classList.add('dark');
+            }
+
+            // Open menu
+            hamburgerBtn.addEventListener('click', function() {
+                menuOverlay.classList.add('active');
+                menuSidebar.classList.add('active');
+            });
+
+            // Close menu
+            function closeMenu() {
+                menuOverlay.classList.remove('active');
+                menuSidebar.classList.remove('active');
+            }
+
+            menuClose.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Theme toggle
+            themeToggleItem.addEventListener('click', function() {
+                const isDark = document.body.classList.contains('dark-mode');
+
+                if (isDark) {
+                    document.body.classList.remove('dark-mode');
+                    themeToggle.classList.remove('dark');
+                    localStorage.setItem('learner_theme', 'light');
+                } else {
+                    document.body.classList.add('dark-mode');
+                    themeToggle.classList.add('dark');
+                    localStorage.setItem('learner_theme', 'dark');
+                }
+            });
+
+            // Sync functionality moved to menu
+            syncMenuItem.addEventListener('click', function() {
+                // Add a brief loading state
+                syncMenuItem.style.opacity = '0.6';
+                syncMenuItem.style.pointerEvents = 'none';
+
+                // Close menu and refresh
+                closeMenu();
+
+                // Refresh the page after a short delay for visual feedback
+                setTimeout(() => {
+                    window.location.reload();
+                }, 200);
+            });
+        }
+
         // Load posts when page loads
         document.addEventListener('DOMContentLoaded', function() {
             setupOfflineSupport();
@@ -1630,7 +1905,7 @@
                 setupTextHighlighting();
                 setupScrollToTop();
                 setupStickyTitles();
-                setupSync();
+                setupHamburgerMenu();
             });
         });
     </script>
