@@ -924,30 +924,133 @@
                 // Scroll to next post after marking as read
                 setTimeout(() => {
                     scrollToNextPost(postDiv);
-                }, 100); // Shorter delay since no collapse animation
+                }, 300); // Small delay to allow collapse animation
             }
         }
 
-        function callWebhook(videoUrl, readStatus) {
-            if (!videoUrl) return;
+        // Offline queue management
+        let offlineQueue = JSON.parse(localStorage.getItem('learner_offline_queue') || '[]');
+        let isOnline = navigator.onLine;
 
-            const webhookUrl = `https://n8n.synergychen.com/webhook/c8115c00-5be7-45c3-88a6-04be9db381f4?url=${encodeURIComponent(videoUrl)}&read=${readStatus}`;
+        // Save queue to localStorage
+        function saveQueue() {
+            localStorage.setItem('learner_offline_queue', JSON.stringify(offlineQueue));
+        }
 
-            fetch(webhookUrl, {
-                method: 'GET',
-                mode: 'no-cors' // This allows the request to go through even if CORS is not configured
-            })
-            .then(() => {
-                // Show sync notification on success
-                showSyncNotification();
-            })
-            .catch((error) => {
-                console.error('Webhook call failed:', error);
-                // Still show notification since we can't detect success/failure with no-cors
-                showSyncNotification();
+        // Add action to offline queue
+        function queueAction(videoUrl, readStatus) {
+            const action = {
+                id: Date.now() + Math.random(),
+                videoUrl: videoUrl,
+                readStatus: readStatus,
+                timestamp: new Date().toISOString()
+            };
+
+            // Remove any existing action for the same video to avoid duplicates
+            offlineQueue = offlineQueue.filter(item => item.videoUrl !== videoUrl);
+            offlineQueue.push(action);
+            saveQueue();
+
+            console.log('Action queued for offline sync:', action);
+            showOfflineNotification('Action saved for when you\'re back online');
+        }
+
+        // Process offline queue when back online
+        function processOfflineQueue() {
+            if (offlineQueue.length === 0) return;
+
+            console.log(`Processing ${offlineQueue.length} queued actions...`);
+            showSyncNotification('Syncing offline actions...');
+
+            const queueCopy = [...offlineQueue];
+            offlineQueue = [];
+            saveQueue();
+
+            let processed = 0;
+            let failed = [];
+
+            queueCopy.forEach(action => {
+                callWebhookDirect(action.videoUrl, action.readStatus)
+                    .then(() => {
+                        processed++;
+                        if (processed + failed.length === queueCopy.length) {
+                            if (failed.length === 0) {
+                                showSyncNotification('All offline actions synced successfully!');
+                            } else {
+                                // Re-queue failed actions
+                                offlineQueue = [...offlineQueue, ...failed];
+                                saveQueue();
+                                showSyncNotification(`${processed} actions synced, ${failed.length} failed`);
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        failed.push(action);
+                        if (processed + failed.length === queueCopy.length) {
+                            // Re-queue failed actions
+                            offlineQueue = [...offlineQueue, ...failed];
+                            saveQueue();
+                            showSyncNotification(`${processed} actions synced, ${failed.length} failed`);
+                        }
+                    });
             });
         }
 
+        // Direct webhook call that returns a promise
+        function callWebhookDirect(videoUrl, readStatus) {
+            const webhookUrl = `https://n8n.synergychen.com/webhook/c8115c00-5be7-45c3-88a6-04be9db381f4?url=${encodeURIComponent(videoUrl)}&read=${readStatus}`;
+
+            return fetch(webhookUrl, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Webhook called successfully');
+                    return response;
+                } else {
+                    console.error('Webhook call failed:', response.status);
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            });
+        }
+
+        // Call webhook to update read status (with offline support)
+        function callWebhook(videoUrl, readStatus) {
+            if (!isOnline) {
+                queueAction(videoUrl, readStatus);
+                return;
+            }
+
+            callWebhookDirect(videoUrl, readStatus)
+                .catch(error => {
+                    console.error('Error calling webhook:', error);
+                    // If online but request failed, queue it
+                    queueAction(videoUrl, readStatus);
+                });
+        }
+
+        // Show offline notification
+        function showOfflineNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #ff9800;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 4px;
+                z-index: 1000;
+                font-size: 0.9rem;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
         function showSyncNotification() {
             // Remove any existing notification
             const existingNotification = document.querySelector('.sync-notification');
@@ -1470,8 +1573,37 @@
             `;
         }
 
+        // Online/offline event listeners
+        function setupOfflineSupport() {
+            // Update online status
+            window.addEventListener('online', function() {
+                isOnline = true;
+                console.log('Back online - processing queued actions');
+                showSyncNotification('Back online! Syncing...');
+                setTimeout(processOfflineQueue, 1000); // Small delay to ensure connection is stable
+            });
+
+            window.addEventListener('offline', function() {
+                isOnline = false;
+                console.log('Gone offline - actions will be queued');
+                showOfflineNotification('You\'re offline. Actions will be saved and synced later.');
+            });
+
+            // Process any existing queue on page load if online
+            if (isOnline && offlineQueue.length > 0) {
+                console.log('Found queued actions from previous session');
+                setTimeout(processOfflineQueue, 2000); // Delay to let page fully load
+            }
+
+            // Show offline indicator if currently offline
+            if (!isOnline) {
+                showOfflineNotification('You\'re currently offline. Actions will be saved and synced later.');
+            }
+        }
+
         // Load posts when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            setupOfflineSupport();
             loadPosts().then(() => {
                 setupSearch();
                 setupCollapseAll();
