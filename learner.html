@@ -282,6 +282,21 @@
             background: #5a6fd8;
         }
 
+        .hamburger-menu {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .listen-btn {
             background: #667eea;
             color: white;
@@ -513,6 +528,11 @@
 <body>
     <div class="container">
         <div class="controls">
+            <button class="hamburger-menu" id="hamburger-menu" title="Menu">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
             <div class="search-container">
                 <input type="text" class="search-bar" id="search-bar" placeholder="Search posts...">
             </div>
