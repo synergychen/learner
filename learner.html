@@ -1297,6 +1297,10 @@
             }
 
             callWebhookDirect(videoUrl, readStatus)
+                .then(() => {
+                    // Show sync notification immediately when task is completed online
+                    showSyncNotification('Synced');
+                })
                 .catch(error => {
                     console.error('Error calling webhook:', error);
                     // If online but request failed, queue it
@@ -1847,7 +1851,10 @@
             window.addEventListener('offline', function() {
                 isOnline = false;
                 console.log('Gone offline - actions will be queued');
-                showOfflineNotification('You\'re offline. Actions will be saved and synced later.');
+                // Only show offline notification if there are pending tasks
+                if (offlineQueue.length > 0) {
+                    showOfflineNotification('You\'re offline. Actions will be saved and synced later.');
+                }
             });
 
             // Process any existing queue on page load if online
@@ -1856,8 +1863,8 @@
                 setTimeout(processOfflineQueue, 2000); // Delay to let page fully load
             }
 
-            // Show offline indicator if currently offline
-            if (!isOnline) {
+            // Show offline indicator if currently offline and there are pending tasks
+            if (!isOnline && offlineQueue.length > 0) {
                 showOfflineNotification('You\'re currently offline. Actions will be saved and synced later.');
             }
         }
@@ -1872,8 +1879,8 @@
             const themeToggleItem = document.getElementById('theme-toggle-item');
             const syncMenuItem = document.getElementById('sync-menu-item');
 
-            // Load saved theme
-            const savedTheme = localStorage.getItem('learner_theme') || 'light';
+            // Load saved theme - default to dark
+            const savedTheme = localStorage.getItem('learner_theme') || 'dark';
             if (savedTheme === 'dark') {
                 document.body.classList.add('dark-mode');
                 themeToggle.classList.add('dark');
