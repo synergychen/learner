@@ -1284,7 +1284,9 @@
                     return response;
                 } else {
                     console.error('Webhook call failed:', response.status);
-                    throw new Error(`HTTP ${response.status}`);
+                    const error = new Error(`HTTP ${response.status}`);
+                    error.status = response.status;
+                    throw error;
                 }
             });
         }
@@ -1303,8 +1305,16 @@
                 })
                 .catch(error => {
                     console.error('Error calling webhook:', error);
-                    // If online but request failed, queue it
-                    queueAction(videoUrl, readStatus);
+
+                    // Check if it's an internal server error (5xx)
+                    if (error.status && error.status >= 500 && error.status < 600) {
+                        // For internal server errors, show failed notification instead of queuing
+                        console.log('Internal server error - not queuing request');
+                        showSyncNotification('Failed');
+                    } else {
+                        // For other errors (network issues, 4xx errors), queue the request
+                        queueAction(videoUrl, readStatus);
+                    }
                 });
         }
 
