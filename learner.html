@@ -52,7 +52,7 @@
         }
 
         .blog-post {
-            background: white;
+            background: #2d3748;
             margin-bottom: 15px;
             border-radius: 12px;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -82,7 +82,7 @@
         }
 
         .mark-read-btn-bottom {
-            background: #667eea;
+            background: #071df5;
             color: white;
             border: none;
             padding: 8px 12px;
@@ -96,7 +96,7 @@
         }
 
         .mark-read-btn-bottom:hover {
-            background: #5a6fd8;
+            background: #071df5;
         }
 
         .mark-read-btn-bottom.read {
@@ -116,31 +116,54 @@
             background-color: #f8f9fa;
         }
 
-        .sticky-title {
+        .header {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
-            backdrop-filter: blur(10px);
+            width: 100%;
+            background: #071df5;
             padding: 15px 20px;
-            z-index: 99;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            font-size: 0.9rem;
-            font-weight: 600;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-title {
+            font-size: 1.2rem;
+            font-weight: 100;
             color: white;
-            transform: translateY(-100%);
-            transition: transform 0.3s ease;
-            line-height: 1.3;
+            margin: 0;
+            transition: all 0.3s ease;
             cursor: pointer;
         }
 
-        .sticky-title:hover {
-            background: linear-gradient(135deg, rgba(90, 111, 216, 0.95) 0%, rgba(102, 65, 142, 0.95) 100%);
+        .header-menu {
+            background: transparent;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .sticky-title.show {
-            transform: translateY(0);
+        .header-menu svg {
+            stroke-width: 1.5;
+        }
+
+        .header-menu:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Add top padding to body to account for fixed header */
+        body {
+            padding-top: 70px;
         }
 
         .post-header {
@@ -175,7 +198,7 @@
         }
 
         .highlight-tooltip:hover {
-            background: #667eea;
+            background: #071df5;
         }
 
         .highlight-tooltip::after {
@@ -190,7 +213,7 @@
         }
 
         .highlight-tooltip:hover::after {
-            border-color: #667eea transparent transparent transparent;
+            border-color: #071df5 transparent transparent transparent;
         }
 
         .scroll-to-top {
@@ -199,7 +222,7 @@
             right: 30px;
             width: 40px;
             height: 40px;
-            background: #667eea;
+            background: #071df5;
             color: white;
             border: none;
             border-radius: 50%;
@@ -214,7 +237,7 @@
         }
 
         .scroll-to-top:hover {
-            background: #5a6fd8;
+            background: #071df5;
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
             opacity: 1;
@@ -240,12 +263,12 @@
 
         .search-bar:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #071df5;
             box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
         }
 
         .collapse-all-btn {
-            background: #667eea;
+            background: #071df5;
             color: white;
             border: none;
             padding: 10px 12px;
@@ -260,11 +283,11 @@
         }
 
         .collapse-all-btn:hover {
-            background: #5a6fd8;
+            background: #071df5;
         }
 
         .sync-btn {
-            background: #667eea;
+            background: #071df5;
             color: white;
             border: none;
             padding: 10px 12px;
@@ -279,26 +302,7 @@
         }
 
         .sync-btn:hover {
-            background: #5a6fd8;
-        }
-
-        .hamburger-menu {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 10px 12px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .hamburger-menu:hover {
-            background: #5a6fd8;
+            background: #071df5;
         }
 
         /* Hamburger Menu Sidebar */
@@ -400,7 +404,7 @@
         }
 
         .theme-toggle.dark {
-            background: #667eea;
+            background: #071df5;
         }
 
         .theme-toggle-slider {
@@ -530,7 +534,7 @@
         }
 
         .listen-btn {
-            background: #667eea;
+            background: #071df5;
             color: white;
             border: none;
             padding: 6px;
@@ -546,27 +550,27 @@
         }
 
         .listen-btn:hover {
-            background: #5a6fd8;
+            background: #071df5;
         }
 
         .listen-btn.playing {
-            background: #5a6fd8;
+            background: #071df5;
         }
 
         .listen-btn.playing:hover {
-            background: #4c63d2;
+            background: #071df5;
         }
 
         .post-header {
             padding: 25px 30px 20px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             cursor: pointer;
             transition: background-color 0.2s ease;
             position: relative;
         }
 
         .post-header:hover {
-            background-color: #f8f9fa;
+            background-color: rgba(255, 255, 255, 0.1);
         }
 
 
@@ -574,7 +578,8 @@
             font-size: 1.8rem;
             font-weight: 600;
             margin-bottom: 10px;
-            color: #667eea;
+            color: white;
+            line-height: 1.3;
         }
 
         .post-title a {
@@ -584,7 +589,7 @@
         }
 
         .post-title a:hover {
-            color: #667eea;
+            color: rgba(255, 255, 255, 0.8);
         }
 
         .post-date {
@@ -595,7 +600,7 @@
         }
 
         .mark-read-btn {
-            background: #667eea;
+            background: #071df5;
             color: white;
             border: none;
             padding: 6px 12px;
@@ -607,7 +612,7 @@
         }
 
         .mark-read-btn:hover {
-            background: #5a6fd8;
+            background: #071df5;
         }
 
         .mark-read-btn.read {
@@ -675,7 +680,7 @@
         }
 
         .post-content blockquote {
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #071df5;
             margin: 20px 0;
             padding: 15px 20px;
             background: #f8f9ff;
@@ -722,7 +727,7 @@
         }
 
         .post-content a {
-            color: #667eea;
+            color: #071df5;
             text-decoration: none;
         }
 
@@ -758,13 +763,19 @@
     </style>
 </head>
 <body>
+    <!-- Fixed Header -->
+    <div class="header">
+        <h1 class="header-title" id="header-title">Learner</h1>
+        <button class="header-menu" id="header-menu" title="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </button>
+    </div>
+
     <div class="container">
         <div class="controls">
-            <button class="hamburger-menu" id="hamburger-menu" title="Menu">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
             <div class="search-container">
                 <input type="text" class="search-bar" id="search-bar" placeholder="Search posts...">
             </div>
@@ -805,7 +816,6 @@
             </div>
         </div>
 
-        <div class="sticky-title" id="sticky-title"></div>
 
         <div class="main-content">
             <div id="loading" class="loading">
@@ -1702,53 +1712,55 @@
             });
         }
 
-        // Sticky post title functionality
-        function setupStickyTitles() {
-            const stickyTitle = document.getElementById('sticky-title');
+        // Header title update functionality
+        function setupHeaderTitleUpdate() {
+            const headerTitle = document.getElementById('header-title');
+            const headerMenu = document.getElementById('header-menu');
             const posts = document.querySelectorAll('.blog-post');
             let currentPost = null;
+            const originalTitle = 'Learner';
 
             if (posts.length === 0) return;
 
             window.addEventListener('scroll', function() {
                 const scrollTop = window.pageYOffset;
-
                 currentPost = null;
 
-                // Calculate the bottom position of the sticky header
-                // Sticky header height is approximately 60px (15px padding top + 15px padding bottom + text height)
-                const stickyHeaderHeight = 60;
-                const stickyBottomPosition = scrollTop + stickyHeaderHeight;
+                // Calculate the bottom position of the fixed header
+                const headerHeight = 70; // Header height with padding
+                const headerBottomPosition = scrollTop + headerHeight;
 
-                // Find which post the bottom of the sticky header overlays with
+                // Find which post is currently in view under the header
                 for (let i = 0; i < posts.length; i++) {
                     const post = posts[i];
                     const postTop = post.offsetTop;
                     const postBottom = postTop + post.offsetHeight;
 
-                    // Check if the bottom of the sticky header is within this post's boundaries
-                    if (stickyBottomPosition >= postTop && stickyBottomPosition <= postBottom) {
+                    // Check if the header bottom overlaps with this post
+                    if (headerBottomPosition >= postTop && headerBottomPosition <= postBottom) {
                         currentPost = post;
-                        break; // Found the post, no need to check others
+                        break;
                     }
                 }
 
-                // Show/hide sticky title based on scroll position and current post
+                // Update header title and settings icon visibility based on current post
                 if (currentPost && scrollTop > 100) {
                     const titleElement = currentPost.querySelector('.post-title');
                     if (titleElement) {
-                        stickyTitle.textContent = titleElement.textContent;
-                        stickyTitle.classList.add('show');
+                        const postTitle = titleElement.textContent || titleElement.innerText;
+                        headerTitle.textContent = postTitle;
+                        headerMenu.style.display = 'none'; // Hide settings icon
                     }
                 } else {
-                    stickyTitle.classList.remove('show');
+                    headerTitle.textContent = originalTitle;
+                    headerMenu.style.display = 'flex'; // Show settings icon
                 }
             });
 
-            // Add click handler to scroll to beginning of current post
-            stickyTitle.addEventListener('click', function() {
-                if (currentPost) {
-                    const offset = currentPost.offsetTop - 20; // 20px padding from top
+            // Click handler for header title to scroll to current post
+            headerTitle.addEventListener('click', function() {
+                if (currentPost && headerTitle.textContent !== originalTitle) {
+                    const offset = currentPost.offsetTop - headerHeight;
                     window.scrollTo({
                         top: offset,
                         behavior: 'smooth'
@@ -1881,7 +1893,7 @@
 
         // Hamburger menu functionality
         function setupHamburgerMenu() {
-            const hamburgerBtn = document.getElementById('hamburger-menu');
+            const headerMenuBtn = document.getElementById('header-menu');
             const menuOverlay = document.getElementById('menu-overlay');
             const menuSidebar = document.getElementById('menu-sidebar');
             const menuClose = document.getElementById('menu-close');
@@ -1897,10 +1909,13 @@
             }
 
             // Open menu
-            hamburgerBtn.addEventListener('click', function() {
+            function openMenu() {
                 menuOverlay.classList.add('active');
                 menuSidebar.classList.add('active');
-            });
+            }
+
+            headerMenuBtn.addEventListener('click', openMenu);
+            hamburgerBtn.addEventListener('click', openMenu);
 
             // Close menu
             function closeMenu() {
@@ -1950,7 +1965,7 @@
                 setupCollapseAll();
                 setupTextHighlighting();
                 setupScrollToTop();
-                setupStickyTitles();
+                setupHeaderTitleUpdate();
                 setupHamburgerMenu();
             });
         });
