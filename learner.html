@@ -90,6 +90,7 @@
             font-size: 0.9rem;
             cursor: pointer;
             margin-top: 20px;
+            opacity: 0.8;
             transition: background-color 0.2s ease;
             display: block;
             margin-left: auto;
@@ -271,6 +272,7 @@
             background: #071df5;
             color: white;
             border: none;
+            opacity: 0.8;
             padding: 10px 12px;
             border-radius: 4px;
             font-size: 0.8rem;
@@ -551,12 +553,14 @@
             border-radius: 50%;
             cursor: pointer;
             transition: background-color 0.2s ease;
-            margin: 10px 0;
+            margin: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            opacity: 0.8;
             width: 26px;
             height: 26px;
+            flex-shrink: 0;
         }
 
         .listen-btn:hover {
@@ -608,6 +612,9 @@
             font-size: 0.9rem;
             font-weight: 100;
             white-space: pre-line;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .mark-read-btn {
@@ -992,7 +999,7 @@
             const listenBtn = document.createElement('button');
             listenBtn.className = 'listen-btn';
             listenBtn.innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="12" height="12" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <polygon points="5,3 19,12 5,21" fill="currentColor"/>
                 </svg>
             `;
@@ -1010,7 +1017,7 @@
                 toggleSpeech(listenBtn);
             });
 
-            headerDiv.appendChild(listenBtn);
+            dateElement.appendChild(listenBtn);
             headerDiv.appendChild(dateElement);
 
             const contentDiv = document.createElement('div');
