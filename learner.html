@@ -17,11 +17,16 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --font-scale: 1;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: #333;
             background-color: #f8f9fa;
+            font-size: calc(16px * var(--font-scale));
         }
 
         .container {
@@ -31,14 +36,14 @@
         }
 
         header p {
-            font-size: 1.1rem;
+            font-size: calc(1.1rem * var(--font-scale));
             opacity: 0.9;
         }
 
         .loading {
             text-align: center;
             padding: 40px;
-            font-size: 1.1rem;
+            font-size: calc(1.1rem * var(--font-scale));
             color: #666;
         }
 
@@ -92,7 +97,7 @@
             border: none;
             padding: 8px 12px;
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: calc(0.9rem * var(--font-scale));
             cursor: pointer;
             margin-top: 20px;
             opacity: 0.8;
@@ -138,7 +143,7 @@
         }
 
         .header-title {
-            font-size: 1.2rem;
+            font-size: calc(1.2rem * var(--font-scale));
             font-weight: 100;
             color: white;
             margin: 0;
@@ -196,7 +201,7 @@
             color: white;
             padding: 8px 12px;
             border-radius: 4px;
-            font-size: 0.8rem;
+            font-size: calc(0.8rem * var(--font-scale));
             cursor: pointer;
             z-index: 1000;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -263,7 +268,7 @@
             padding: 10px 15px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: calc(0.9rem * var(--font-scale));
             transition: border-color 0.2s ease;
         }
 
@@ -280,7 +285,7 @@
             opacity: 0.8;
             padding: 10px 12px;
             border-radius: 4px;
-            font-size: 0.8rem;
+            font-size: calc(0.8rem * var(--font-scale));
             cursor: pointer;
             transition: background-color 0.2s ease;
             white-space: nowrap;
@@ -299,7 +304,7 @@
             border: none;
             padding: 10px 12px;
             border-radius: 4px;
-            font-size: 0.8rem;
+            font-size: calc(0.8rem * var(--font-scale));
             cursor: pointer;
             transition: background-color 0.2s ease;
             white-space: nowrap;
@@ -358,7 +363,7 @@
         }
 
         .menu-title {
-            font-size: 1.2rem;
+            font-size: calc(1.2rem * var(--font-scale));
             font-weight: 100;
             color: #333;
         }
@@ -366,7 +371,7 @@
         .menu-close {
             background: none;
             border: none;
-            font-size: 1.5rem;
+            font-size: calc(1.5rem * var(--font-scale));
             cursor: pointer;
             color: #666;
             padding: 5px;
@@ -396,7 +401,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 0.9rem;
+            font-size: calc(0.9rem * var(--font-scale));
             color: #333;
         }
 
@@ -427,6 +432,42 @@
 
         .theme-toggle.dark .theme-toggle-slider {
             transform: translateX(26px);
+        }
+
+        /* Font size controls */
+        .font-size-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .font-size-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            min-width: 28px;
+            opacity: 0.8;
+        }
+
+        .font-size-btn:hover {
+            background: #071df5;
+            opacity: 1;
+        }
+
+        .font-size-display {
+            font-size: calc(0.9rem * var(--font-scale));
+            color: #666;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        body.dark-mode .font-size-display {
+            color: #999;
         }
 
         /* Dark mode styles */
@@ -484,12 +525,12 @@
             font-weight: 100;
         }
 
-        body.dark-mode .post-content h1 { font-size: 1.4rem; }
-        body.dark-mode .post-content h2 { font-size: 1.2rem; }
-        body.dark-mode .post-content h3 { font-size: 1.0rem; }
-        body.dark-mode .post-content h4 { font-size: 0.9rem; }
-        body.dark-mode .post-content h5 { font-size: 0.8rem; }
-        body.dark-mode .post-content h6 { font-size: 0.7rem; }
+        body.dark-mode .post-content h1 { font-size: calc(1.4rem * var(--font-scale)); }
+        body.dark-mode .post-content h2 { font-size: calc(1.2rem * var(--font-scale)); }
+        body.dark-mode .post-content h3 { font-size: calc(1.0rem * var(--font-scale)); }
+        body.dark-mode .post-content h4 { font-size: calc(0.9rem * var(--font-scale)); }
+        body.dark-mode .post-content h5 { font-size: calc(0.8rem * var(--font-scale)); }
+        body.dark-mode .post-content h6 { font-size: calc(0.7rem * var(--font-scale)); }
 
         body.dark-mode .post-content table {
             border: 1px solid #555;
@@ -599,7 +640,7 @@
 
 
         .post-title {
-            font-size: 1.8rem;
+            font-size: calc(1.8rem * var(--font-scale));
             font-weight: 300;
             margin-bottom: 10px;
             color: #6a78f8;
@@ -619,7 +660,7 @@
 
         .post-date {
             color: #666;
-            font-size: 0.9rem;
+            font-size: calc(0.9rem * var(--font-scale));
             font-weight: 100;
             white-space: pre-line;
             display: flex;
@@ -633,7 +674,7 @@
             border: none;
             padding: 6px 12px;
             border-radius: 4px;
-            font-size: 0.8rem;
+            font-size: calc(0.8rem * var(--font-scale));
             cursor: pointer;
             margin-top: 10px;
             transition: background-color 0.2s ease;
@@ -659,7 +700,7 @@
             color: white;
             padding: 10px 15px;
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: calc(0.9rem * var(--font-scale));
             z-index: 1000;
             opacity: 0;
             transform: translateX(100%);
@@ -686,12 +727,12 @@
             font-weight: 100;
         }
 
-        .post-content h1 { font-size: 1.4rem; color: #6a78f8; }
-        .post-content h2 { font-size: 1.2rem; color: #6a78f8; }
-        .post-content h3 { font-size: 1.0rem; color: #6a78f8; }
-        .post-content h4 { font-size: 0.9rem; color: #6a78f8; }
-        .post-content h5 { font-size: 0.8rem; color: #6a78f8; }
-        .post-content h6 { font-size: 0.7rem; color: #6a78f8; }
+        .post-content h1 { font-size: calc(1.4rem * var(--font-scale)); color: #6a78f8; }
+        .post-content h2 { font-size: calc(1.2rem * var(--font-scale)); color: #6a78f8; }
+        .post-content h3 { font-size: calc(1.0rem * var(--font-scale)); color: #6a78f8; }
+        .post-content h4 { font-size: calc(0.9rem * var(--font-scale)); color: #6a78f8; }
+        .post-content h5 { font-size: calc(0.8rem * var(--font-scale)); color: #6a78f8; }
+        .post-content h6 { font-size: calc(0.7rem * var(--font-scale)); color: #6a78f8; }
 
         .post-content p {
             margin-bottom: 15px;
@@ -721,7 +762,7 @@
             padding: 2px 6px;
             border-radius: 4px;
             font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 0.9em;
+            font-size: calc(0.9em * var(--font-scale));
         }
 
         .post-content pre {
@@ -797,7 +838,7 @@
             text-align: center;
             padding: 60px 20px;
             color: #666;
-            font-size: 1.1rem;
+            font-size: calc(1.1rem * var(--font-scale));
         }
 
         @media (max-width: 768px) {
@@ -806,7 +847,7 @@
             }
 
             header h1 {
-                font-size: 2rem;
+                font-size: calc(2rem * var(--font-scale));
             }
 
             .post-header,
@@ -815,7 +856,7 @@
             }
 
             .post-title {
-                font-size: 1.2rem;
+                font-size: calc(1.2rem * var(--font-scale));
                 font-weight: 300;
             }
         }
@@ -861,6 +902,19 @@
                 </div>
                 <div class="theme-toggle" id="theme-toggle">
                     <div class="theme-toggle-slider"></div>
+                </div>
+            </div>
+            <div class="menu-item" id="font-size-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 7V4h16v3M9 20h6M12 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Font Size
+                </div>
+                <div class="font-size-controls">
+                    <button class="font-size-btn" id="font-size-decrease">A-</button>
+                    <span class="font-size-display" id="font-size-display">100%</span>
+                    <button class="font-size-btn" id="font-size-increase">A+</button>
                 </div>
             </div>
             <div class="menu-item" id="sync-menu-item">
@@ -1399,7 +1453,7 @@
                 padding: 12px 20px;
                 border-radius: 4px;
                 z-index: 1000;
-                font-size: 0.9rem;
+                font-size: calc(0.9rem * var(--font-scale));
                 box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             `;
             notification.textContent = message;
@@ -2012,6 +2066,30 @@
                 setTimeout(() => {
                     window.location.reload();
                 }, 200);
+            });
+
+            // Font size controls
+            const fontSizeDecrease = document.getElementById('font-size-decrease');
+            const fontSizeIncrease = document.getElementById('font-size-increase');
+            const fontSizeDisplay = document.getElementById('font-size-display');
+
+            // Load saved font scale - default to 1
+            let fontScale = parseFloat(localStorage.getItem('learner_font_scale')) || 1;
+            updateFontScale(fontScale);
+
+            function updateFontScale(scale) {
+                fontScale = Math.max(0.8, Math.min(1.5, scale)); // Limit between 80% and 150%
+                document.documentElement.style.setProperty('--font-scale', fontScale);
+                fontSizeDisplay.textContent = Math.round(fontScale * 100) + '%';
+                localStorage.setItem('learner_font_scale', fontScale);
+            }
+
+            fontSizeDecrease.addEventListener('click', function() {
+                updateFontScale(fontScale - 0.1);
+            });
+
+            fontSizeIncrease.addEventListener('click', function() {
+                updateFontScale(fontScale + 0.1);
             });
         }
 
