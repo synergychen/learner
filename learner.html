@@ -52,12 +52,16 @@
         }
 
         .blog-post {
-            background: #1a1a1a;
+            background: white;
             margin-bottom: 15px;
             border-radius: 12px;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
             overflow: hidden;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        body.dark-mode .blog-post {
+            background: #1a1a1a;
         }
 
         .blog-post:hover:not(.read) {
@@ -577,13 +581,21 @@
 
         .post-header {
             padding: 25px 30px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid #eee;
             cursor: pointer;
             transition: background-color 0.2s ease;
             position: relative;
         }
 
         .post-header:hover {
+            background-color: #f8f9fa;
+        }
+
+        body.dark-mode .post-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-mode .post-header:hover {
             background-color: rgba(255, 255, 255, 0.1);
         }
 
@@ -1964,7 +1976,6 @@
             }
 
             headerMenuBtn.addEventListener('click', openMenu);
-            hamburgerBtn.addEventListener('click', openMenu);
 
             // Close menu
             function closeMenu() {
