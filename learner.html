@@ -106,17 +106,9 @@
             margin-left: auto;
         }
 
-        .mark-read-btn-bottom:hover {
-            background: #071df5;
-        }
-
-        .mark-read-btn-bottom.read {
-            background: #28a745;
-        }
-
-        .mark-read-btn-bottom.read:hover {
-            background: #218838;
-        }
+        .mark-read-btn-bottom:hover { background: #071df5; }
+        .mark-read-btn-bottom.read { background: #28a745; }
+        .mark-read-btn-bottom.read:hover { background: #218838; }
 
         .controls {
             display: flex;
@@ -164,13 +156,8 @@
             justify-content: center;
         }
 
-        .header-menu svg {
-            stroke-width: 1.5;
-        }
-
-        .header-menu:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
+        .header-menu svg { stroke-width: 1.5; }
+        .header-menu:hover { background: rgba(255, 255, 255, 0.1); }
 
         /* Add top padding to body to account for fixed header */
         body {
@@ -191,26 +178,14 @@
             transition: background-color 0.2s ease;
         }
 
-        .highlight:hover {
-            background-color: #ffeaa7;
-        }
-
+        .highlight:hover { background-color: #ffeaa7; }
         .highlight-tooltip {
-            position: absolute;
-            background: #333;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: calc(0.8rem * var(--font-scale));
-            cursor: pointer;
-            z-index: 1000;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            position: absolute; background: #333; color: white; padding: 8px 12px;
+            border-radius: 4px; font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             user-select: none;
         }
-
-        .highlight-tooltip:hover {
-            background: #071df5;
-        }
+        .highlight-tooltip:hover { background: #071df5; }
 
         .highlight-tooltip::after {
             content: '';
@@ -278,44 +253,15 @@
             box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
         }
 
-        .collapse-all-btn {
-            background: #071df5;
-            color: white;
-            border: none;
-            opacity: 0.8;
-            padding: 10px 12px;
-            border-radius: 4px;
-            font-size: calc(0.8rem * var(--font-scale));
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
+        .collapse-all-btn, .sync-btn {
+            background: #071df5; color: white; border: none; padding: 10px 12px;
+            border-radius: 4px; font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer; transition: background-color 0.2s ease;
+            white-space: nowrap; display: flex; align-items: center;
             justify-content: center;
         }
-
-        .collapse-all-btn:hover {
-            background: #071df5;
-        }
-
-        .sync-btn {
-            background: #071df5;
-            color: white;
-            border: none;
-            padding: 10px 12px;
-            border-radius: 4px;
-            font-size: calc(0.8rem * var(--font-scale));
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .sync-btn:hover {
-            background: #071df5;
-        }
+        .collapse-all-btn { opacity: 0.8; }
+        .collapse-all-btn:hover, .sync-btn:hover { background: #071df5; }
 
         /* Hamburger Menu Sidebar */
         .menu-overlay {
@@ -331,27 +277,13 @@
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
 
-        .menu-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
+        .menu-overlay.active { opacity: 1; visibility: visible; }
         .menu-sidebar {
-            position: fixed;
-            top: 0;
-            left: -300px;
-            width: 300px;
-            height: 100%;
-            background: white;
-            z-index: 1001;
-            transition: left 0.3s ease;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            position: fixed; top: 0; left: -300px; width: 300px; height: 100%;
+            background: white; z-index: 1001; transition: left 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1); padding: 20px;
         }
-
-        .menu-sidebar.active {
-            left: 0;
-        }
+        .menu-sidebar.active { left: 0; }
 
         .menu-header {
             display: flex;
@@ -454,21 +386,12 @@
             opacity: 0.8;
         }
 
-        .font-size-btn:hover {
-            background: #071df5;
-            opacity: 1;
-        }
-
+        .font-size-btn:hover { background: #071df5; opacity: 1; }
         .font-size-display {
-            font-size: calc(0.9rem * var(--font-scale));
-            color: #666;
-            min-width: 40px;
-            text-align: center;
+            font-size: calc(0.9rem * var(--font-scale)); color: #666;
+            min-width: 40px; text-align: center;
         }
-
-        body.dark-mode .font-size-display {
-            color: #999;
-        }
+        body.dark-mode .font-size-display { color: #999; }
 
         /* Dark mode styles */
         body.dark-mode {
@@ -490,30 +413,12 @@
             color: #e0e0e0;
         }
 
-        body.dark-mode .search-bar::placeholder {
-            color: #999;
-        }
-
-
-        body.dark-mode .post-header {
-            border-bottom: 1px solid #444;
-        }
-
-        body.dark-mode .post-header:hover {
-            background: #1A1A1A;
-        }
-
-        body.dark-mode .post-title a {
-            color: #6a78f8;
-        }
-
-        body.dark-mode .post-date {
-            color: #999;
-        }
-
-        body.dark-mode .post-content {
-            color: #e0e0e0;
-        }
+        body.dark-mode .search-bar::placeholder { color: #999; }
+        body.dark-mode .post-header { border-bottom: 1px solid #444; }
+        body.dark-mode .post-header:hover { background: #1A1A1A; }
+        body.dark-mode .post-title a { color: #6a78f8; }
+        body.dark-mode .post-date { color: #999; }
+        body.dark-mode .post-content { color: #e0e0e0; }
 
         body.dark-mode .post-content h1,
         body.dark-mode .post-content h2,
@@ -527,10 +432,8 @@
 
         body.dark-mode .post-content h1 { font-size: calc(1.4rem * var(--font-scale)); }
         body.dark-mode .post-content h2 { font-size: calc(1.2rem * var(--font-scale)); }
-        body.dark-mode .post-content h3 { font-size: calc(1.0rem * var(--font-scale)); }
-        body.dark-mode .post-content h4 { font-size: calc(1.0rem * var(--font-scale)); }
-        body.dark-mode .post-content h5 { font-size: calc(1.0rem * var(--font-scale)); }
-        body.dark-mode .post-content h6 { font-size: calc(1.0rem * var(--font-scale)); }
+        body.dark-mode .post-content h3, body.dark-mode .post-content h4,
+        body.dark-mode .post-content h5, body.dark-mode .post-content h6 { font-size: calc(1.0rem * var(--font-scale)); }
 
         body.dark-mode .post-content table {
             border: 0.1px solid #2f2f2f;
@@ -736,10 +639,9 @@
 
         .post-content h1 { font-size: calc(1.4rem * var(--font-scale)); color: #6a78f8; }
         .post-content h2 { font-size: calc(1.2rem * var(--font-scale)); color: #6a78f8; }
-        .post-content h3 { font-size: calc(1.0rem * var(--font-scale)); color: #6a78f8; }
-        .post-content h4 { font-size: calc(1.0rem * var(--font-scale)); color: #6a78f8; }
-        .post-content h5 { font-size: calc(1.0rem * var(--font-scale)); color: #6a78f8; }
-        .post-content h6 { font-size: calc(1.0rem * var(--font-scale)); color: #6a78f8; }
+        .post-content h3, .post-content h4, .post-content h5, .post-content h6 {
+            font-size: calc(1.0rem * var(--font-scale)); color: #6a78f8;
+        }
 
         .post-content p {
             margin-bottom: 15px;
@@ -851,28 +753,8 @@
         }
 
         /* Ensure all elements use font-weight 100 */
-        body, html {
-            font-weight: 100;
-        }
-
-        strong, b {
-            font-weight: 100;
-        }
-
-        th {
-            font-weight: 100;
-        }
-
-        dt {
-            font-weight: 100;
-        }
-
-        .post-content strong,
-        .post-content b,
-        .post-content th,
-        .post-content dt {
-            font-weight: 100;
-        }
+        body, html, strong, b, th, dt, .post-content strong, .post-content b,
+        .post-content th, .post-content dt { font-weight: 100; }
 
         .no-posts {
             text-align: center;
@@ -2061,51 +1943,27 @@
                 themeToggle.classList.add('dark');
             }
 
-            // Open menu
-            function openMenu() {
-                menuOverlay.classList.add('active');
-                menuSidebar.classList.add('active');
-            }
+            // Menu controls
+            const openMenu = () => { menuOverlay.classList.add('active'); menuSidebar.classList.add('active'); };
+            const closeMenu = () => { menuOverlay.classList.remove('active'); menuSidebar.classList.remove('active'); };
 
             headerMenuBtn.addEventListener('click', openMenu);
-
-            // Close menu
-            function closeMenu() {
-                menuOverlay.classList.remove('active');
-                menuSidebar.classList.remove('active');
-            }
-
             menuClose.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
 
             // Theme toggle
-            themeToggleItem.addEventListener('click', function() {
+            themeToggleItem.addEventListener('click', () => {
                 const isDark = document.body.classList.contains('dark-mode');
-
-                if (isDark) {
-                    document.body.classList.remove('dark-mode');
-                    themeToggle.classList.remove('dark');
-                    localStorage.setItem('learner_theme', 'light');
-                } else {
-                    document.body.classList.add('dark-mode');
-                    themeToggle.classList.add('dark');
-                    localStorage.setItem('learner_theme', 'dark');
-                }
+                document.body.classList.toggle('dark-mode', !isDark);
+                themeToggle.classList.toggle('dark', !isDark);
+                localStorage.setItem('learner_theme', isDark ? 'light' : 'dark');
             });
 
-            // Sync functionality moved to menu
-            syncMenuItem.addEventListener('click', function() {
-                // Add a brief loading state
-                syncMenuItem.style.opacity = '0.6';
-                syncMenuItem.style.pointerEvents = 'none';
-
-                // Close menu and refresh
+            // Sync functionality
+            syncMenuItem.addEventListener('click', () => {
+                Object.assign(syncMenuItem.style, { opacity: '0.6', pointerEvents: 'none' });
                 closeMenu();
-
-                // Refresh the page after a short delay for visual feedback
-                setTimeout(() => {
-                    window.location.reload();
-                }, 200);
+                setTimeout(() => window.location.reload(), 200);
             });
 
             // Font size controls
@@ -2124,13 +1982,8 @@
                 localStorage.setItem('learner_font_scale', fontScale);
             }
 
-            fontSizeDecrease.addEventListener('click', function() {
-                updateFontScale(fontScale - 0.1);
-            });
-
-            fontSizeIncrease.addEventListener('click', function() {
-                updateFontScale(fontScale + 0.1);
-            });
+            fontSizeDecrease.addEventListener('click', () => updateFontScale(fontScale - 0.1));
+            fontSizeIncrease.addEventListener('click', () => updateFontScale(fontScale + 0.1));
         }
 
         // Load posts when page loads
