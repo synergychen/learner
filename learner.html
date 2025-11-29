@@ -2032,12 +2032,10 @@
             endpoint: 'https://texttospeech.googleapis.com/v1/text:synthesize',
             voice: {
                 languageCode: 'zh-CN',
-                name: 'zh-CN-XiaoxiaoNeural', // High-quality Chinese neural voice
                 ssmlGender: 'FEMALE'
             },
             fallbackVoice: {
                 languageCode: 'en-US',
-                name: 'en-US-Neural2-F', // English fallback voice
                 ssmlGender: 'FEMALE'
             },
             audioConfig: {
@@ -2155,7 +2153,9 @@
         async function synthesizeSpeech(text) {
             // Detect language and choose appropriate voice
             const useChinese = containsChinese(text);
+            console.log('Using Chinese voice:', useChinese);
             const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+            console.log('Selected voice:', selectedVoice);
 
             const requestBody = {
                 input: { text: text },
