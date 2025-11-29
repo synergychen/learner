@@ -498,6 +498,161 @@
             border-bottom: 1px solid #444;
         }
 
+        /* API Key Modal Styles */
+        .api-key-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .api-key-modal.show {
+            display: flex;
+        }
+
+        .api-key-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        body.dark-mode .api-key-modal-content {
+            background: #2d2d2d;
+            color: #e0e0e0;
+        }
+
+        .api-key-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        body.dark-mode .api-key-modal-header {
+            border-bottom: 1px solid #444;
+        }
+
+        .api-key-modal-title {
+            font-size: calc(1.2rem * var(--font-scale));
+            font-weight: 100;
+            color: #333;
+        }
+
+        body.dark-mode .api-key-modal-title {
+            color: #e0e0e0;
+        }
+
+        .api-key-modal-close {
+            background: none;
+            border: none;
+            font-size: calc(1.5rem * var(--font-scale));
+            cursor: pointer;
+            color: #666;
+            padding: 5px;
+        }
+
+        body.dark-mode .api-key-modal-close {
+            color: #999;
+        }
+
+        .api-key-modal-close:hover {
+            color: #333;
+        }
+
+        body.dark-mode .api-key-modal-close:hover {
+            color: #e0e0e0;
+        }
+
+        .api-key-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: calc(0.9rem * var(--font-scale));
+            transition: border-color 0.2s ease;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        body.dark-mode .api-key-input {
+            background: #1a1a1a;
+            border: 1px solid #555;
+            color: #e0e0e0;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: #071df5;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .api-key-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .api-key-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: calc(0.9rem * var(--font-scale));
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .api-key-btn:hover {
+            background: #071df5;
+        }
+
+        .api-key-btn.secondary {
+            background: #6c757d;
+        }
+
+        .api-key-btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .api-key-help {
+            font-size: calc(0.8rem * var(--font-scale));
+            color: #666;
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+
+        body.dark-mode .api-key-help {
+            color: #999;
+        }
+
+        .api-key-help a {
+            color: #071df5;
+            text-decoration: none;
+        }
+
+        .api-key-help a:hover {
+            text-decoration: underline;
+        }
+
         .listen-btn {
             background: #071df5;
             color: white;
@@ -525,6 +680,15 @@
         }
 
         .listen-btn.playing:hover {
+            background: #071df5;
+        }
+
+        .listen-btn.loading {
+            background: #071df5;
+            opacity: 0.8;
+        }
+
+        .listen-btn.loading:hover {
             background: #071df5;
         }
 
@@ -849,8 +1013,41 @@
                     Sync
                 </div>
             </div>
+            <div class="menu-item" id="api-key-menu-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 2L19 4L15 8L22 15L21 16L14 9L10 13L8 11L12 7L16 3L18 1L21 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 7L2 21L1 20L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    TTS API Key
+                </div>
+            </div>
         </div>
 
+        <!-- API Key Configuration Modal -->
+        <div class="api-key-modal" id="api-key-modal">
+            <div class="api-key-modal-content">
+                <div class="api-key-modal-header">
+                    <div class="api-key-modal-title">Configure Google Cloud TTS API Key</div>
+                    <button class="api-key-modal-close" id="api-key-modal-close">&times;</button>
+                </div>
+                <div class="api-key-help">
+                    To use text-to-speech functionality, you need a Google Cloud Text-to-Speech API key:
+                    <br><br>
+                    1. Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>
+                    <br>2. Create a project and enable Text-to-Speech API
+                    <br>3. Create credentials (API Key)
+                    <br>4. Paste your API key below
+                </div>
+                <form class="api-key-form" id="api-key-form">
+                    <input type="password" class="api-key-input" id="api-key-input" placeholder="Enter your Google Cloud TTS API key" autocomplete="off">
+                    <div class="api-key-buttons">
+                        <button type="button" class="api-key-btn secondary" id="api-key-cancel">Cancel</button>
+                        <button type="submit" class="api-key-btn" id="api-key-save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <div class="main-content">
             <div id="loading" class="loading">
@@ -993,7 +1190,7 @@
             // Store post data and speech state on the button
             listenBtn.postData = post;
             listenBtn.speechState = {
-                speech: null,
+                audio: null,
                 isPlaying: false
             };
 
@@ -1806,20 +2003,49 @@
 
         // Sync functionality is now handled in hamburger menu
 
-        // Speech synthesis functionality
-        function toggleSpeech(button) {
+        // Google Cloud Text-to-Speech API configuration
+        const GOOGLE_CLOUD_TTS_CONFIG = {
+            apiKey: localStorage.getItem('googleCloudTTSApiKey') || '', // Google Cloud API key from settings
+            endpoint: 'https://texttospeech.googleapis.com/v1/text:synthesize',
+            voice: {
+                languageCode: 'zh-CN',
+                name: 'zh-CN-XiaoxiaoNeural', // High-quality Chinese neural voice
+                ssmlGender: 'FEMALE'
+            },
+            fallbackVoice: {
+                languageCode: 'en-US',
+                name: 'en-US-Neural2-F', // English fallback voice
+                ssmlGender: 'FEMALE'
+            },
+            audioConfig: {
+                audioEncoding: 'MP3',
+                speakingRate: 1.0,
+                pitch: 0.0,
+                volumeGainDb: 0.0
+            }
+        };
+
+        // Speech synthesis functionality using Google Cloud TTS
+        async function toggleSpeech(button) {
             const speechState = button.speechState;
 
             // Stop all other playing audio first
             stopAllOtherAudio(button);
 
             if (speechState.isPlaying) {
-                // Pause current audio
-                if (speechState.speech) {
-                    speechSynthesis.cancel();
+                // Stop current audio
+                if (speechState.audio) {
+                    speechState.audio.pause();
+                    speechState.audio.currentTime = 0;
                     resetButton(button);
                 }
             } else {
+                // Check if API key is configured
+                if (!GOOGLE_CLOUD_TTS_CONFIG.apiKey) {
+                    alert('Please configure your Google Cloud Text-to-Speech API key in the GOOGLE_CLOUD_TTS_CONFIG object.');
+                    return;
+                }
+
                 // Start new speech - get text content from post content div, excluding tables
                 const postElement = button.closest('.blog-post');
                 const contentDiv = postElement.querySelector('.post-content');
@@ -1838,37 +2064,138 @@
                     textToSpeak = `Overview. ${contentText.trim()}`;
                 }
 
-                const speech = new SpeechSynthesisUtterance(textToSpeak);
+                // Limit text length to avoid API limits (Google Cloud TTS has a 5000 character limit)
+                if (textToSpeak.length > 4500) {
+                    textToSpeak = textToSpeak.substring(0, 4500) + '... Content truncated for audio playback.';
+                }
 
-                // Configure speech
-                speech.rate = 1.0;
-                speech.pitch = 1.0;
-                speech.volume = 1.0;
+                try {
+                    // Update button to loading state
+                    button.classList.add('loading');
+                    button.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                                <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                                <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                            </circle>
+                        </svg>
+                    `;
 
-                // Update button state
-                speechState.speech = speech;
-                speechState.isPlaying = true;
-                button.classList.add('playing');
-                button.innerHTML = `
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
-                        <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
-                    </svg>
-                `;
+                    // Call Google Cloud TTS API
+                    const audioContent = await synthesizeSpeech(textToSpeak);
 
-                // Handle speech end
-                speech.onend = function() {
+                    // Create audio element and play
+                    const audio = new Audio();
+                    audio.src = `data:audio/mp3;base64,${audioContent}`;
+
+                    // Update button state
+                    speechState.audio = audio;
+                    speechState.isPlaying = true;
+                    button.classList.remove('loading');
+                    button.classList.add('playing');
+                    button.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                            <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                        </svg>
+                    `;
+
+                    // Handle audio end
+                    audio.onended = function() {
+                        resetButton(button);
+                    };
+
+                    // Handle audio error
+                    audio.onerror = function() {
+                        console.error('Audio playback error');
+                        resetButton(button);
+                    };
+
+                    // Start playing
+                    await audio.play();
+
+                } catch (error) {
+                    console.error('Text-to-speech error:', error);
+                    button.classList.remove('loading');
                     resetButton(button);
-                };
-
-                // Handle speech error
-                speech.onerror = function() {
-                    resetButton(button);
-                };
-
-                // Start speaking
-                speechSynthesis.speak(speech);
+                    alert('Failed to generate speech. Please check your API key and try again.');
+                }
             }
+        }
+
+        // Function to detect if text contains Chinese characters
+        function containsChinese(text) {
+            return /[\u4e00-\u9fff]/.test(text);
+        }
+
+        // Function to call Google Cloud Text-to-Speech API with language detection
+        async function synthesizeSpeech(text) {
+            // Detect language and choose appropriate voice
+            const useChinese = containsChinese(text);
+            const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+
+            const requestBody = {
+                input: { text: text },
+                voice: selectedVoice,
+                audioConfig: GOOGLE_CLOUD_TTS_CONFIG.audioConfig
+            };
+
+            try {
+                const response = await fetch(`${GOOGLE_CLOUD_TTS_CONFIG.endpoint}?key=${GOOGLE_CLOUD_TTS_CONFIG.apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+
+                    // If Chinese voice fails and we were using Chinese, try English fallback
+                    if (useChinese && errorData.error?.message?.includes('voice')) {
+                        console.log('Chinese voice failed, falling back to English');
+                        return await synthesizeSpeechWithVoice(text, GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice);
+                    }
+
+                    throw new Error(`Google Cloud TTS API error: ${errorData.error?.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.audioContent;
+            } catch (error) {
+                // If Chinese voice fails, try English fallback
+                if (useChinese && !error.message.includes('fallback attempted')) {
+                    console.log('Chinese TTS failed, trying English fallback');
+                    return await synthesizeSpeechWithVoice(text, GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice);
+                }
+                throw error;
+            }
+        }
+
+        // Helper function to synthesize speech with a specific voice
+        async function synthesizeSpeechWithVoice(text, voice) {
+            const requestBody = {
+                input: { text: text },
+                voice: voice,
+                audioConfig: GOOGLE_CLOUD_TTS_CONFIG.audioConfig
+            };
+
+            const response = await fetch(`${GOOGLE_CLOUD_TTS_CONFIG.endpoint}?key=${GOOGLE_CLOUD_TTS_CONFIG.apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Google Cloud TTS API error (fallback attempted): ${errorData.error?.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            return data.audioContent;
         }
 
         function stopAllOtherAudio(currentButton) {
@@ -1876,7 +2203,10 @@
             const allListenButtons = document.querySelectorAll('.listen-btn');
             allListenButtons.forEach(button => {
                 if (button !== currentButton && button.speechState && button.speechState.isPlaying) {
-                    speechSynthesis.cancel();
+                    if (button.speechState.audio) {
+                        button.speechState.audio.pause();
+                        button.speechState.audio.currentTime = 0;
+                    }
                     resetButton(button);
                 }
             });
@@ -1884,10 +2214,10 @@
 
         function resetButton(button) {
             if (button.speechState) {
-                button.speechState.speech = null;
+                button.speechState.audio = null;
                 button.speechState.isPlaying = false;
             }
-            button.classList.remove('playing');
+            button.classList.remove('playing', 'loading');
             button.innerHTML = `
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
@@ -1935,6 +2265,7 @@
             const themeToggle = document.getElementById('theme-toggle');
             const themeToggleItem = document.getElementById('theme-toggle-item');
             const syncMenuItem = document.getElementById('sync-menu-item');
+            const apiKeyMenuItem = document.getElementById('api-key-menu-item');
 
             // Load saved theme - default to dark
             const savedTheme = localStorage.getItem('learner_theme') || 'dark';
@@ -1966,6 +2297,12 @@
                 setTimeout(() => window.location.reload(), 200);
             });
 
+            // API Key configuration
+            apiKeyMenuItem.addEventListener('click', () => {
+                closeMenu();
+                showApiKeyModal();
+            });
+
             // Font size controls
             const fontSizeDecrease = document.getElementById('font-size-decrease');
             const fontSizeIncrease = document.getElementById('font-size-increase');
@@ -1986,6 +2323,76 @@
             fontSizeIncrease.addEventListener('click', () => updateFontScale(fontScale + 0.1));
         }
 
+        // API Key Modal Functions
+        function showApiKeyModal() {
+            const modal = document.getElementById('api-key-modal');
+            const input = document.getElementById('api-key-input');
+
+            // Pre-fill with existing API key if available
+            const existingKey = localStorage.getItem('googleCloudTTSApiKey') || '';
+            input.value = existingKey;
+
+            modal.classList.add('show');
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function hideApiKeyModal() {
+            const modal = document.getElementById('api-key-modal');
+            modal.classList.remove('show');
+        }
+
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const apiKey = input.value.trim();
+
+            if (!apiKey) {
+                alert('Please enter a valid API key');
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('googleCloudTTSApiKey', apiKey);
+
+            // Update the config object
+            GOOGLE_CLOUD_TTS_CONFIG.apiKey = apiKey;
+
+            hideApiKeyModal();
+
+            // Show success message
+            alert('API key saved successfully! You can now use text-to-speech functionality.');
+        }
+
+        function setupApiKeyModal() {
+            const modal = document.getElementById('api-key-modal');
+            const closeBtn = document.getElementById('api-key-modal-close');
+            const cancelBtn = document.getElementById('api-key-cancel');
+            const form = document.getElementById('api-key-form');
+
+            // Close modal events
+            closeBtn.addEventListener('click', hideApiKeyModal);
+            cancelBtn.addEventListener('click', hideApiKeyModal);
+
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideApiKeyModal();
+                }
+            });
+
+            // Handle form submission
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveApiKey();
+            });
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('show')) {
+                    hideApiKeyModal();
+                }
+            });
+        }
+
         // Load posts when page loads
         document.addEventListener('DOMContentLoaded', function() {
             setupOfflineSupport();
@@ -1996,6 +2403,7 @@
                 setupScrollToTop();
                 setupHeaderTitleUpdate();
                 setupHamburgerMenu();
+                setupApiKeyModal();
             });
         });
     </script>
