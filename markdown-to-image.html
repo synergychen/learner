@@ -107,27 +107,57 @@
             margin-bottom: 16px;
         }
 
-        .download-btn {
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .action-btn {
             width: 100%;
-            background: #28a745;
-            color: white;
             border: none;
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 18px;
             font-weight: 600;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: background 0.2s;
+            transition: all 0.2s;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
         }
 
         .download-btn:hover {
             background: #218838;
+            transform: translateY(-1px);
         }
 
-        .download-btn:disabled {
+        .share-btn {
+            background: #007AFF;
+            color: white;
+        }
+
+        .share-btn:hover {
+            background: #0056CC;
+            transform: translateY(-1px);
+        }
+
+        .action-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-icon {
+            font-size: 20px;
         }
 
         @media (min-width: 768px) {
@@ -141,6 +171,36 @@
 
             .input-section, .preview-section {
                 flex: 1;
+            }
+
+            .button-container {
+                flex-direction: row;
+            }
+        }
+
+        /* iPhone specific optimizations */
+        @media (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .markdown-input {
+                min-height: 150px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            .preview-content {
+                min-height: 150px;
+            }
+
+            .action-btn {
+                font-size: 16px;
+                padding: 14px;
+                min-height: 50px;
             }
         }
     </style>
@@ -182,15 +242,15 @@ console.log('Hello, World!');
             </div>
         </div>
 
-        <button class="download-btn" id="download-btn">
-            📸 Download as Image
+        <button class="action-btn share-btn" id="share-btn">
+            Download As Image
         </button>
     </div>
 
     <script>
         const markdownInput = document.getElementById('markdown-input');
         const previewContent = document.getElementById('preview-content');
-        const downloadBtn = document.getElementById('download-btn');
+        const shareBtn = document.getElementById('share-btn');
 
         function updatePreview() {
             const markdownText = markdownInput.value;
@@ -203,33 +263,91 @@ console.log('Hello, World!');
             previewContent.innerHTML = htmlContent;
         }
 
-        function downloadAsImage() {
-            downloadBtn.disabled = true;
-            downloadBtn.textContent = 'Generating...';
-
-            html2canvas(previewContent, {
+        function generateCanvas() {
+            return html2canvas(previewContent, {
                 backgroundColor: '#ffffff',
                 scale: 2,
                 useCORS: true,
                 allowTaint: true
-            }).then(canvas => {
+            });
+        }
+
+        function setButtonLoading(button, isLoading) {
+            if (isLoading) {
+                button.disabled = true;
+                button.innerHTML = '<span class="btn-icon">⏳</span><span>Generating...</span>';
+            } else {
+                button.disabled = false;
+                button.innerHTML = '<span class="btn-icon"></span><span>Download As Image</span>';
+            }
+        }
+
+        async function shareAsImage() {
+            if (!navigator.share) {
+                // Fallback to download if Web Share API is not supported
+                downloadAsImage();
+                return;
+            }
+
+            setButtonLoading(shareBtn, true);
+
+            try {
+                const canvas = await generateCanvas();
+
+                // Convert canvas to blob
+                canvas.toBlob(async (blob) => {
+                    try {
+                        const file = new File([blob], 'markdown-export.png', { type: 'image/png' });
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                                title: 'Markdown Export',
+                                text: 'Generated from Markdown to Image',
+                                files: [file]
+                            });
+                        } else {
+                            // Fallback to basic share without files
+                            const dataUrl = canvas.toDataURL('image/png');
+                            await navigator.share({
+                                title: 'Markdown Export',
+                                text: 'Generated from Markdown to Image',
+                                url: dataUrl
+                            });
+                        }
+                    } catch (shareError) {
+                        console.log('Share cancelled or failed:', shareError);
+                        // If share fails, fallback to download
+                        downloadAsImage();
+                    } finally {
+                        setButtonLoading(shareBtn, false);
+                    }
+                }, 'image/png');
+            } catch (error) {
+                console.error('Error generating image:', error);
+                alert('Error generating image. Please try again.');
+                setButtonLoading(shareBtn, false);
+            }
+        }
+
+        function downloadAsImage() {
+            setButtonLoading(shareBtn, true);
+
+            generateCanvas().then(canvas => {
                 const link = document.createElement('a');
                 link.download = 'markdown-export.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
 
-                downloadBtn.disabled = false;
-                downloadBtn.textContent = '📸 Download as Image';
+                setButtonLoading(shareBtn, false);
             }).catch(error => {
                 console.error('Error generating image:', error);
                 alert('Error generating image. Please try again.');
-                downloadBtn.disabled = false;
-                downloadBtn.textContent = '📸 Download as Image';
+                setButtonLoading(shareBtn, false);
             });
         }
 
         markdownInput.addEventListener('input', updatePreview);
-        downloadBtn.addEventListener('click', downloadAsImage);
+        shareBtn.addEventListener('click', shareAsImage);
 
         // Initial preview update
         updatePreview();
