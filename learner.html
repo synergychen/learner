@@ -709,6 +709,15 @@
             background: #071df5;
         }
 
+        .listen-btn.paused {
+            background: #071df5;
+            opacity: 0.7;
+        }
+
+        .listen-btn.paused:hover {
+            background: #071df5;
+        }
+
         .post-header {
             padding: 25px 30px 20px;
             border-bottom: 1px solid #eee;
@@ -1214,7 +1223,8 @@
             listenBtn.postData = post;
             listenBtn.speechState = {
                 audio: null,
-                isPlaying: false
+                isPlaying: false,
+                isPaused: false
             };
 
             // Add click handler for listen functionality
@@ -2054,12 +2064,32 @@
             stopAllOtherAudio(button);
 
             if (speechState.isPlaying) {
-                // Stop current audio
+                // Pause current audio
                 if (speechState.audio) {
                     speechState.audio.pause();
-                    speechState.audio.currentTime = 0;
-                    resetButton(button);
+                    speechState.isPlaying = false;
+                    speechState.isPaused = true;
+                    button.classList.remove('playing');
+                    button.classList.add('paused');
+                    button.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                    `;
                 }
+            } else if (speechState.isPaused && speechState.audio) {
+                // Resume paused audio
+                speechState.audio.play();
+                speechState.isPlaying = true;
+                speechState.isPaused = false;
+                button.classList.remove('paused');
+                button.classList.add('playing');
+                button.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                        <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                    </svg>
+                `;
             } else {
                 // Check if API key is configured
                 if (!GOOGLE_CLOUD_TTS_CONFIG.apiKey) {
@@ -2112,6 +2142,7 @@
                     // Update button state
                     speechState.audio = audio;
                     speechState.isPlaying = true;
+                    speechState.isPaused = false;
                     button.classList.remove('loading');
                     button.classList.add('playing');
                     button.innerHTML = `
@@ -2225,7 +2256,7 @@
             // Find all listen buttons and stop their audio
             const allListenButtons = document.querySelectorAll('.listen-btn');
             allListenButtons.forEach(button => {
-                if (button !== currentButton && button.speechState && button.speechState.isPlaying) {
+                if (button !== currentButton && button.speechState && (button.speechState.isPlaying || button.speechState.isPaused)) {
                     if (button.speechState.audio) {
                         button.speechState.audio.pause();
                         button.speechState.audio.currentTime = 0;
@@ -2239,8 +2270,9 @@
             if (button.speechState) {
                 button.speechState.audio = null;
                 button.speechState.isPlaying = false;
+                button.speechState.isPaused = false;
             }
-            button.classList.remove('playing', 'loading');
+            button.classList.remove('playing', 'loading', 'paused');
             button.innerHTML = `
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
