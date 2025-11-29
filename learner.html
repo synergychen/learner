@@ -653,6 +653,23 @@
             text-decoration: underline;
         }
 
+        /* API Key Status Indicator */
+        .api-key-status {
+            opacity: 0;
+            color: #28a745;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .api-key-status.configured {
+            opacity: 1;
+        }
+
+        body.dark-mode .api-key-status {
+            color: #28a745;
+        }
+
         .listen-btn {
             background: #071df5;
             color: white;
@@ -1020,6 +1037,12 @@
                         <path d="M16 7L2 21L1 20L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     TTS API Key
+                </div>
+                <div class="api-key-status" id="api-key-status">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </div>
             </div>
         </div>
@@ -2323,6 +2346,20 @@
             fontSizeIncrease.addEventListener('click', () => updateFontScale(fontScale + 0.1));
         }
 
+        // API Key Status Functions
+        function updateApiKeyStatus() {
+            const statusIndicator = document.getElementById('api-key-status');
+            const apiKey = localStorage.getItem('googleCloudTTSApiKey');
+
+            if (apiKey && apiKey.trim()) {
+                statusIndicator.classList.add('configured');
+                statusIndicator.title = 'API Key configured';
+            } else {
+                statusIndicator.classList.remove('configured');
+                statusIndicator.title = 'API Key not configured';
+            }
+        }
+
         // API Key Modal Functions
         function showApiKeyModal() {
             const modal = document.getElementById('api-key-modal');
@@ -2357,6 +2394,9 @@
             GOOGLE_CLOUD_TTS_CONFIG.apiKey = apiKey;
 
             hideApiKeyModal();
+
+            // Update status indicator
+            updateApiKeyStatus();
 
             // Show success message
             alert('API key saved successfully! You can now use text-to-speech functionality.');
@@ -2404,6 +2444,7 @@
                 setupHeaderTitleUpdate();
                 setupHamburgerMenu();
                 setupApiKeyModal();
+                updateApiKeyStatus();
             });
         });
     </script>
