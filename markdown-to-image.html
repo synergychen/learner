@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to Image</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-section, .preview-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #4a90e2;
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .markdown-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 16px;
+            border: none;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+        }
+
+        .preview-content {
+            padding: 16px;
+            min-height: 200px;
+            background: white;
+            overflow-wrap: break-word;
+        }
+
+        .preview-content h1, .preview-content h2, .preview-content h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .preview-content p {
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .preview-content ul, .preview-content ol {
+            margin-bottom: 16px;
+            padding-left: 20px;
+        }
+
+        .preview-content code {
+            background: #f1f1f1;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .preview-content pre {
+            background: #f8f8f8;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        .download-btn {
+            width: 100%;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+        }
+
+        .download-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                max-width: 1200px;
+            }
+
+            .editor-container {
+                flex-direction: row;
+            }
+
+            .input-section, .preview-section {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Markdown to Image</h1>
+            <p>Type or paste your markdown below and download as image</p>
+        </div>
+
+        <div class="editor-container">
+            <div class="input-section">
+                <div class="section-header">Markdown Editor</div>
+                <textarea
+                    class="markdown-input"
+                    id="markdown-input"
+                    placeholder="# Hello World
+
+This is **bold** text and this is *italic* text.
+
+- List item 1
+- List item 2
+- List item 3
+
+```javascript
+console.log('Hello, World!');
+```
+
+> This is a blockquote"
+                ></textarea>
+            </div>
+
+            <div class="preview-section">
+                <div class="section-header">Preview</div>
+                <div class="preview-content" id="preview-content">
+                    <p>Your markdown preview will appear here...</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="download-btn" id="download-btn">
+            📸 Download as Image
+        </button>
+    </div>
+
+    <script>
+        const markdownInput = document.getElementById('markdown-input');
+        const previewContent = document.getElementById('preview-content');
+        const downloadBtn = document.getElementById('download-btn');
+
+        function updatePreview() {
+            const markdownText = markdownInput.value;
+            if (markdownText.trim() === '') {
+                previewContent.innerHTML = '<p>Your markdown preview will appear here...</p>';
+                return;
+            }
+
+            const htmlContent = marked.parse(markdownText);
+            previewContent.innerHTML = htmlContent;
+        }
+
+        function downloadAsImage() {
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = 'Generating...';
+
+            html2canvas(previewContent, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'markdown-export.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = '📸 Download as Image';
+            }).catch(error => {
+                console.error('Error generating image:', error);
+                alert('Error generating image. Please try again.');
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = '📸 Download as Image';
+            });
+        }
+
+        markdownInput.addEventListener('input', updatePreview);
+        downloadBtn.addEventListener('click', downloadAsImage);
+
+        // Initial preview update
+        updatePreview();
+    </script>
+</body>
+</html>
