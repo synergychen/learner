@@ -1131,7 +1131,19 @@
 
         .tab-item.active {
             color: #6a78f8;
-            background: rgba(106, 120, 248, 0.1);
+            background: #000;
+            position: relative;
+        }
+
+        .tab-item.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #6a78f8;
+            border-radius: 0 0 2px 2px;
         }
 
         .tab-icon {
@@ -1161,6 +1173,10 @@
 
         body.dark-mode .tab-item:hover {
             background: rgba(255, 255, 255, 0.08);
+        }
+
+        body.dark-mode .tab-item.active {
+            background: #000;
         }
     </style>
 </head>
@@ -1400,10 +1416,10 @@
 
             dateElement.textContent = dateText;
 
-            // Initialize post state based on post.isRead
-            if (post.isRead) {
+            // Initialize post state based on post.isRead or post.isArchived
+            if (post.isRead || post.isArchived) {
                 postDiv.classList.add('read');
-                // Read posts start collapsed
+                // Read/archived posts start collapsed
                 postDiv.classList.add('collapsed');
             }
 
@@ -1411,17 +1427,32 @@
             const markReadBtnBottom = document.createElement('button');
             markReadBtnBottom.className = 'mark-read-btn-bottom';
 
-            // Initialize bottom button state based on post.isRead
-            if (post.isRead) {
-                markReadBtnBottom.textContent = 'Mark as unread';
-                markReadBtnBottom.classList.add('read');
-            } else {
-                markReadBtnBottom.textContent = 'Mark as read';
-            }
+            // Initialize bottom button state - different for Videos vs Notes
+            if (post.isArchived !== undefined) {
+                // This is a Note - use Archive functionality
+                if (post.isArchived) {
+                    markReadBtnBottom.textContent = 'Unarchive';
+                    markReadBtnBottom.classList.add('read');
+                } else {
+                    markReadBtnBottom.textContent = 'Archive';
+                }
 
-            markReadBtnBottom.addEventListener('click', function() {
-                toggleReadStatus(postDiv, markReadBtnBottom, post.videoUrl);
-            });
+                markReadBtnBottom.addEventListener('click', function() {
+                    toggleArchiveStatus(postDiv, markReadBtnBottom, post);
+                });
+            } else {
+                // This is a Video - use Read functionality
+                if (post.isRead) {
+                    markReadBtnBottom.textContent = 'Mark as unread';
+                    markReadBtnBottom.classList.add('read');
+                } else {
+                    markReadBtnBottom.textContent = 'Mark as read';
+                }
+
+                markReadBtnBottom.addEventListener('click', function() {
+                    toggleReadStatus(postDiv, markReadBtnBottom, post.videoUrl);
+                });
+            }
 
             // Add click handler to header for collapse/expand
             headerDiv.addEventListener('click', function(e) {
@@ -1781,6 +1812,47 @@
                     scrollToNextPost(postDiv);
                 }, 300); // Small delay to allow collapse animation
             }
+        }
+
+        // Toggle archive status for Notes
+        function toggleArchiveStatus(postDiv, button, post) {
+            const isArchived = postDiv.classList.contains('read'); // Using 'read' class for archived state
+
+            if (isArchived) {
+                // Unarchive - force expand
+                postDiv.classList.remove('read');
+                postDiv.classList.remove('collapsed');
+
+                // Update button
+                button.textContent = 'Archive';
+                button.classList.remove('read');
+
+                // Update post object
+                post.isArchived = false;
+
+                console.log('Note unarchived');
+            } else {
+                // Archive - collapse
+                postDiv.classList.add('read');
+                postDiv.classList.add('collapsed');
+
+                // Update button
+                button.textContent = 'Unarchive';
+                button.classList.add('read');
+
+                // Update post object
+                post.isArchived = true;
+
+                console.log('Note archived');
+
+                // Scroll to next post after archiving
+                setTimeout(() => {
+                    scrollToNextPost(postDiv);
+                }, 300); // Small delay to allow collapse animation
+            }
+
+            // Clear cached notes data to reflect changes
+            cachedData.notes = null;
         }
 
         // Offline queue management
