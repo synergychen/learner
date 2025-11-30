@@ -3142,28 +3142,40 @@
             const bottomTabs = document.querySelector('.bottom-tabs');
             let lastScrollTop = 0;
             let scrollTimeout;
+            let lastScrollDirection = null;
+            const scrollThreshold = 5; // Minimum pixels to consider as intentional scroll
 
             window.addEventListener('scroll', () => {
                 const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollDifference = Math.abs(currentScrollTop - lastScrollTop);
 
                 // Clear existing timeout
                 clearTimeout(scrollTimeout);
 
-                // Determine scroll direction
-                if (currentScrollTop > lastScrollTop && currentScrollTop > 100) {
-                    // Scrolling down - hide tabs
-                    bottomTabs.classList.add('hidden');
-                } else if (currentScrollTop < lastScrollTop) {
-                    // Scrolling up - show tabs
-                    bottomTabs.classList.remove('hidden');
+                // Only process scroll if it's above threshold (prevents jitter)
+                if (scrollDifference > scrollThreshold) {
+                    // Determine scroll direction
+                    if (currentScrollTop > lastScrollTop && currentScrollTop > 100) {
+                        // Scrolling down - hide tabs
+                        bottomTabs.classList.add('hidden');
+                        lastScrollDirection = 'down';
+                    } else if (currentScrollTop < lastScrollTop) {
+                        // Scrolling up - show tabs
+                        bottomTabs.classList.remove('hidden');
+                        lastScrollDirection = 'up';
+                    }
+
+                    lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
                 }
 
-                // Show tabs after scroll stops (for better UX)
+                // Only show tabs after scroll stops if:
+                // 1. User was scrolling up, OR
+                // 2. User is near the top of the page
                 scrollTimeout = setTimeout(() => {
-                    bottomTabs.classList.remove('hidden');
+                    if (lastScrollDirection === 'up' || currentScrollTop < 200) {
+                        bottomTabs.classList.remove('hidden');
+                    }
                 }, 1000);
-
-                lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
             }, { passive: true });
         }
 
