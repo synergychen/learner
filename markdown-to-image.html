@@ -355,11 +355,14 @@ console.log('Hello, World!');
         const shareBtn = document.getElementById('share-btn');
 
         function updatePreview() {
-            const markdownText = markdownInput.value;
+            let markdownText = markdownInput.value;
             if (markdownText.trim() === '') {
                 previewContent.innerHTML = '<p>Your markdown preview will appear here...</p>';
                 return;
             }
+
+            // Replace literal \n strings with actual newlines
+            markdownText = markdownText.replace(/\\n/g, '\n');
 
             const htmlContent = marked.parse(markdownText);
             previewContent.innerHTML = htmlContent;
