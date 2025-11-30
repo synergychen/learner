@@ -2157,7 +2157,7 @@
             }
         };
 
-        // Speech synthesis functionality using Google Cloud TTS
+        // Speech synthesis functionality using Google Cloud TTS with streaming support
         async function toggleSpeech(button) {
             const speechState = button.speechState;
 
@@ -2165,22 +2165,34 @@
             stopAllOtherAudio(button);
 
             if (speechState.isPlaying) {
-                // Pause current audio
-                if (speechState.audio) {
+                // Pause current audio (works for both single and streaming audio)
+                if (speechState.audioQueueManager) {
+                    // Streaming audio
+                    speechState.audioQueueManager.pause();
+                } else if (speechState.audio) {
+                    // Single chunk audio
                     speechState.audio.pause();
-                    speechState.isPlaying = false;
-                    speechState.isPaused = true;
-                    button.classList.remove('playing');
-                    button.classList.add('paused');
-                    button.innerHTML = `
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
-                        </svg>
-                    `;
                 }
-            } else if (speechState.isPaused && speechState.audio) {
-                // Resume paused audio
-                speechState.audio.play();
+
+                speechState.isPlaying = false;
+                speechState.isPaused = true;
+                button.classList.remove('playing');
+                button.classList.add('paused');
+                button.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                `;
+            } else if (speechState.isPaused) {
+                // Resume paused audio (works for both single and streaming audio)
+                if (speechState.audioQueueManager) {
+                    // Streaming audio
+                    await speechState.audioQueueManager.resume();
+                } else if (speechState.audio) {
+                    // Single chunk audio
+                    await speechState.audio.play();
+                }
+
                 speechState.isPlaying = true;
                 speechState.isPaused = false;
                 button.classList.remove('paused');
@@ -2216,8 +2228,6 @@
                     textToSpeak = `Overview. ${contentText.trim()}`;
                 }
 
-                // No need to truncate - Long Audio API can handle large text
-
                 try {
                     // Update button to loading state
                     button.classList.add('loading');
@@ -2230,39 +2240,68 @@
                         </svg>
                     `;
 
-                    // Call Google Cloud TTS API
-                    const audioContent = await synthesizeSpeech(textToSpeak);
+                    // Call Google Cloud TTS API (returns either single audio or streaming result)
+                    const audioResult = await synthesizeSpeech(textToSpeak);
 
-                    // Create audio element and play
-                    const audio = new Audio();
-                    audio.src = `data:audio/mp3;base64,${audioContent}`;
+                    // Check if this is a streaming result (multiple chunks) or single audio
+                    if (audioResult.totalChunks && audioResult.totalChunks > 1) {
+                        // Streaming audio with multiple chunks
+                        console.log(`Starting streaming playback with ${audioResult.totalChunks} chunks`);
 
-                    // Update button state
-                    speechState.audio = audio;
-                    speechState.isPlaying = true;
-                    speechState.isPaused = false;
-                    button.classList.remove('loading');
-                    button.classList.add('playing');
-                    button.innerHTML = `
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
-                            <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
-                        </svg>
-                    `;
+                        const audioQueueManager = new AudioQueueManager(audioResult, button);
+                        speechState.audioQueueManager = audioQueueManager;
+                        speechState.audio = null; // Clear single audio reference
 
-                    // Handle audio end
-                    audio.onended = function() {
-                        resetButton(button);
-                    };
+                        // Update button state
+                        speechState.isPlaying = true;
+                        speechState.isPaused = false;
+                        button.classList.remove('loading');
+                        button.classList.add('playing');
+                        button.innerHTML = `
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                                <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                            </svg>
+                        `;
 
-                    // Handle audio error
-                    audio.onerror = function() {
-                        console.error('Audio playback error');
-                        resetButton(button);
-                    };
+                        // Start streaming playback
+                        await audioQueueManager.playFirstChunk();
 
-                    // Start playing
-                    await audio.play();
+                    } else {
+                        // Single chunk audio (original behavior)
+                        const audioContent = audioResult.firstChunk || audioResult;
+
+                        const audio = new Audio();
+                        audio.src = `data:audio/mp3;base64,${audioContent}`;
+
+                        // Update button state
+                        speechState.audio = audio;
+                        speechState.audioQueueManager = null; // Clear streaming reference
+                        speechState.isPlaying = true;
+                        speechState.isPaused = false;
+                        button.classList.remove('loading');
+                        button.classList.add('playing');
+                        button.innerHTML = `
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                                <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                            </svg>
+                        `;
+
+                        // Handle audio end
+                        audio.onended = function() {
+                            resetButton(button);
+                        };
+
+                        // Handle audio error
+                        audio.onerror = function() {
+                            console.error('Audio playback error');
+                            resetButton(button);
+                        };
+
+                        // Start playing
+                        await audio.play();
+                    }
 
                 } catch (error) {
                     console.error('Text-to-speech error:', error);
@@ -2454,32 +2493,65 @@
 
         // Function for chunked audio synthesis (splits long text into smaller parts)
         async function synthesizeChunkedAudio(text, voice) {
-            console.log('Starting chunked synthesis for long text');
+            console.log('Starting streaming chunked synthesis for long text');
 
             // Split text into chunks that fit within the API limit
             const chunks = splitTextIntoChunks(text, GOOGLE_CLOUD_TTS_CONFIG.maxTextBytes);
             console.log(`Split text into ${chunks.length} chunks`);
 
-            // Synthesize each chunk
-            const audioChunks = [];
-            for (let i = 0; i < chunks.length; i++) {
-                console.log(`Synthesizing chunk ${i + 1}/${chunks.length}`);
+            // Synthesize first chunk immediately
+            console.log('Synthesizing first chunk immediately');
+            const firstChunk = await synthesizeShortAudio(chunks[0], voice);
+
+            // Create streaming audio result with first chunk and background processing
+            const streamingResult = {
+                firstChunk: firstChunk,
+                totalChunks: chunks.length,
+                currentChunkIndex: 0,
+                chunks: chunks,
+                voice: voice,
+                audioQueue: [],
+                isProcessing: true
+            };
+
+            // Process remaining chunks in background if there are more
+            if (chunks.length > 1) {
+                processRemainingChunks(streamingResult, chunks.slice(1), voice);
+            } else {
+                streamingResult.isProcessing = false;
+            }
+
+            return streamingResult;
+        }
+
+        // Background processing of remaining chunks
+        async function processRemainingChunks(streamingResult, remainingChunks, voice) {
+            for (let i = 0; i < remainingChunks.length; i++) {
+                const chunkIndex = i + 1; // +1 because first chunk is already processed
+                console.log(`Background processing chunk ${chunkIndex + 1}/${streamingResult.totalChunks}`);
+
                 try {
-                    const audioContent = await synthesizeShortAudio(chunks[i], voice);
-                    audioChunks.push(audioContent);
+                    const audioContent = await synthesizeShortAudio(remainingChunks[i], voice);
+                    streamingResult.audioQueue.push({
+                        index: chunkIndex,
+                        audioContent: audioContent,
+                        text: remainingChunks[i]
+                    });
+
+                    console.log(`Chunk ${chunkIndex + 1} ready for playback`);
 
                     // Small delay between requests to avoid rate limiting
-                    if (i < chunks.length - 1) {
+                    if (i < remainingChunks.length - 1) {
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
                 } catch (error) {
-                    console.error(`Failed to synthesize chunk ${i + 1}:`, error);
-                    throw new Error(`Failed to synthesize audio chunk ${i + 1}: ${error.message}`);
+                    console.error(`Failed to synthesize background chunk ${chunkIndex + 1}:`, error);
+                    // Continue processing other chunks even if one fails
                 }
             }
 
-            // Combine audio chunks
-            return await combineAudioChunks(audioChunks);
+            streamingResult.isProcessing = false;
+            console.log('All chunks processed and ready for streaming playback');
         }
 
         // Function to split text into chunks that fit within byte limit
@@ -2537,26 +2609,119 @@
             return chunks.filter(chunk => chunk.trim().length > 0);
         }
 
-        // Function to combine multiple base64 audio chunks into a single audio blob
-        async function combineAudioChunks(audioChunks) {
-            console.log(`Combining ${audioChunks.length} audio chunks`);
-
-            // For simplicity, we'll just return the first chunk
-            // In a more sophisticated implementation, you'd need to:
-            // 1. Decode base64 to binary
-            // 2. Parse MP3 headers
-            // 3. Concatenate audio data properly
-            // 4. Re-encode to base64
-
-            // For now, just play chunks sequentially by returning the first one
-            // and storing the rest for sequential playback
-            if (audioChunks.length > 0) {
-                // Store additional chunks for sequential playback
-                window.audioChunksQueue = audioChunks.slice(1);
-                return audioChunks[0];
+        // Audio queue manager for streaming playback
+        class AudioQueueManager {
+            constructor(streamingResult, button) {
+                this.streamingResult = streamingResult;
+                this.button = button;
+                this.currentAudio = null;
+                this.currentChunkIndex = 0;
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.isDestroyed = false;
             }
 
-            throw new Error('No audio chunks to combine');
+            async playFirstChunk() {
+                if (this.isDestroyed) return;
+
+                console.log('Playing first chunk');
+                const audio = new Audio();
+                audio.src = `data:audio/mp3;base64,${this.streamingResult.firstChunk}`;
+
+                this.currentAudio = audio;
+                this.currentChunkIndex = 0;
+
+                // Set up event handlers
+                audio.onended = () => this.onChunkEnded();
+                audio.onerror = () => this.onAudioError();
+
+                await audio.play();
+                this.isPlaying = true;
+                this.isPaused = false;
+            }
+
+            async onChunkEnded() {
+                if (this.isDestroyed) return;
+
+                console.log(`Chunk ${this.currentChunkIndex + 1} ended`);
+
+                // Check if there are more chunks to play
+                if (this.currentChunkIndex + 1 < this.streamingResult.totalChunks) {
+                    await this.playNextChunk();
+                } else {
+                    // All chunks finished
+                    console.log('All chunks finished playing');
+                    this.onAllChunksFinished();
+                }
+            }
+
+            async playNextChunk() {
+                if (this.isDestroyed) return;
+
+                const nextChunkIndex = this.currentChunkIndex + 1;
+                console.log(`Attempting to play chunk ${nextChunkIndex + 1}`);
+
+                // Find the next chunk in the queue
+                const nextChunk = this.streamingResult.audioQueue.find(chunk => chunk.index === nextChunkIndex);
+
+                if (nextChunk) {
+                    console.log(`Playing chunk ${nextChunkIndex + 1}`);
+                    const audio = new Audio();
+                    audio.src = `data:audio/mp3;base64,${nextChunk.audioContent}`;
+
+                    this.currentAudio = audio;
+                    this.currentChunkIndex = nextChunkIndex;
+
+                    audio.onended = () => this.onChunkEnded();
+                    audio.onerror = () => this.onAudioError();
+
+                    await audio.play();
+                } else {
+                    // Chunk not ready yet, wait and retry
+                    console.log(`Chunk ${nextChunkIndex + 1} not ready, waiting...`);
+                    setTimeout(() => this.playNextChunk(), 500);
+                }
+            }
+
+            pause() {
+                if (this.currentAudio && this.isPlaying) {
+                    this.currentAudio.pause();
+                    this.isPlaying = false;
+                    this.isPaused = true;
+                    console.log(`Paused at chunk ${this.currentChunkIndex + 1}`);
+                }
+            }
+
+            async resume() {
+                if (this.currentAudio && this.isPaused) {
+                    await this.currentAudio.play();
+                    this.isPlaying = true;
+                    this.isPaused = false;
+                    console.log(`Resumed chunk ${this.currentChunkIndex + 1}`);
+                }
+            }
+
+            stop() {
+                if (this.currentAudio) {
+                    this.currentAudio.pause();
+                    this.currentAudio.currentTime = 0;
+                }
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.isDestroyed = true;
+                console.log('Audio queue stopped');
+            }
+
+            onAudioError() {
+                console.error(`Audio error in chunk ${this.currentChunkIndex + 1}`);
+                this.onAllChunksFinished();
+            }
+
+            onAllChunksFinished() {
+                console.log('Streaming audio playback completed');
+                resetButton(this.button);
+                this.isDestroyed = true;
+            }
         }
 
         function stopAllOtherAudio(currentButton) {
@@ -2564,6 +2729,11 @@
             const allListenButtons = document.querySelectorAll('.listen-btn');
             allListenButtons.forEach(button => {
                 if (button !== currentButton && button.speechState && (button.speechState.isPlaying || button.speechState.isPaused)) {
+                    // Stop streaming audio if present
+                    if (button.speechState.audioQueueManager) {
+                        button.speechState.audioQueueManager.stop();
+                    }
+                    // Stop single audio if present
                     if (button.speechState.audio) {
                         button.speechState.audio.pause();
                         button.speechState.audio.currentTime = 0;
@@ -2575,7 +2745,17 @@
 
         function resetButton(button) {
             if (button.speechState) {
-                button.speechState.audio = null;
+                // Clean up streaming audio if present
+                if (button.speechState.audioQueueManager) {
+                    button.speechState.audioQueueManager.stop();
+                    button.speechState.audioQueueManager = null;
+                }
+                // Clean up single audio if present
+                if (button.speechState.audio) {
+                    button.speechState.audio.pause();
+                    button.speechState.audio.currentTime = 0;
+                    button.speechState.audio = null;
+                }
                 button.speechState.isPlaying = false;
                 button.speechState.isPaused = false;
             }
