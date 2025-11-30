@@ -2429,12 +2429,11 @@
             const englishWords = englishText.trim().split(/\s+/).filter(word => word.length > 0 && /[a-zA-Z]/.test(word));
             const englishWordCount = englishWords.length;
 
-            // Total reading units: English words + Chinese characters
-            const totalReadingUnits = englishWordCount + chineseCharCount;
-
-            // Calculate reading time (250 units per minute)
-            const unitsPerMinute = 250;
-            const readingTimeMinutes = Math.ceil(totalReadingUnits / unitsPerMinute);
+            // Calculate reading time: English words / 250 + Chinese characters / 400
+            const englishReadingTime = englishWordCount / 250;
+            const chineseReadingTime = chineseCharCount / 400;
+            const totalReadingTime = englishReadingTime + chineseReadingTime;
+            const readingTimeMinutes = Math.ceil(totalReadingTime);
 
             // Return formatted reading time (minimum 1 minute)
             return `${Math.max(1, readingTimeMinutes)} min read`;
