@@ -1174,6 +1174,11 @@
             if (post.publishedAt) {
                 dateText += `\nPublished: ${formatDate(post.publishedAt)}`;
             }
+
+            // Calculate and add reading time
+            const readingTime = calculateReadingTime(post.summary || '');
+            dateText += `\n${readingTime}`;
+
             dateElement.textContent = dateText;
 
             // Initialize post state based on post.isRead
@@ -2176,6 +2181,38 @@
         // Function to detect if text contains Chinese characters
         function containsChinese(text) {
             return /[\u4e00-\u9fff]/.test(text);
+        }
+
+        // Function to calculate reading time based on word count (English) and character count (Chinese)
+        function calculateReadingTime(text) {
+            if (!text || text.trim().length === 0) {
+                return '1 min read';
+            }
+
+            // Remove HTML tags and get plain text
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = text;
+            const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+            // Separate Chinese characters and English text
+            const chineseCharRegex = /[\u4e00-\u9fff]/g;
+            const chineseMatches = plainText.match(chineseCharRegex) || [];
+            const chineseCharCount = chineseMatches.length;
+
+            // Remove Chinese characters to count English words
+            const englishText = plainText.replace(chineseCharRegex, ' ');
+            const englishWords = englishText.trim().split(/\s+/).filter(word => word.length > 0 && /[a-zA-Z]/.test(word));
+            const englishWordCount = englishWords.length;
+
+            // Total reading units: English words + Chinese characters
+            const totalReadingUnits = englishWordCount + chineseCharCount;
+
+            // Calculate reading time (250 units per minute)
+            const unitsPerMinute = 250;
+            const readingTimeMinutes = Math.ceil(totalReadingUnits / unitsPerMinute);
+
+            // Return formatted reading time (minimum 1 minute)
+            return `${Math.max(1, readingTimeMinutes)} min read`;
         }
 
         // Function to call Google Cloud Text-to-Speech API with text chunking for long content
