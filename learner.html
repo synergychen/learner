@@ -393,6 +393,32 @@
         }
         body.dark-mode .font-size-display { color: #999; }
 
+        .playback-speed-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .playback-speed-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            min-width: 28px;
+            opacity: 0.8;
+        }
+
+        .playback-speed-btn:hover { background: #071df5; opacity: 1; }
+        .playback-speed-display {
+            font-size: calc(0.9rem * var(--font-scale)); color: #666;
+            min-width: 40px; text-align: center;
+        }
+        body.dark-mode .playback-speed-display { color: #999; }
+
         /* Dark mode styles */
         body.dark-mode {
             background: #1a1a1a;
@@ -1114,6 +1140,20 @@
                     <button class="font-size-btn" id="font-size-decrease">A-</button>
                     <span class="font-size-display" id="font-size-display">100%</span>
                     <button class="font-size-btn" id="font-size-increase">A+</button>
+                </div>
+            </div>
+            <div class="menu-item" id="playback-speed-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M19 12h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Playback Speed
+                </div>
+                <div class="playback-speed-controls">
+                    <button class="playback-speed-btn" id="playback-speed-decrease">-</button>
+                    <span class="playback-speed-display" id="playback-speed-display">1.0x</span>
+                    <button class="playback-speed-btn" id="playback-speed-increase">+</button>
                 </div>
             </div>
             <div class="menu-item" id="sync-menu-item">
@@ -2273,6 +2313,7 @@
 
                         const audio = new Audio();
                         audio.src = `data:audio/mp3;base64,${audioContent}`;
+                        audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
                         // Update button state
                         speechState.audio = audio;
@@ -2626,6 +2667,7 @@
                 console.log('Playing first chunk');
                 const audio = new Audio();
                 audio.src = `data:audio/mp3;base64,${this.streamingResult.firstChunk}`;
+                audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
                 this.currentAudio = audio;
                 this.currentChunkIndex = 0;
@@ -2667,6 +2709,7 @@
                     console.log(`Playing chunk ${nextChunkIndex + 1}`);
                     const audio = new Audio();
                     audio.src = `data:audio/mp3;base64,${nextChunk.audioContent}`;
+                    audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
                     this.currentAudio = audio;
                     this.currentChunkIndex = nextChunkIndex;
@@ -2862,6 +2905,29 @@
 
             fontSizeDecrease.addEventListener('click', () => updateFontScale(fontScale - 0.1));
             fontSizeIncrease.addEventListener('click', () => updateFontScale(fontScale + 0.1));
+
+            // Playback speed controls
+            const playbackSpeedDecrease = document.getElementById('playback-speed-decrease');
+            const playbackSpeedIncrease = document.getElementById('playback-speed-increase');
+            const playbackSpeedDisplay = document.getElementById('playback-speed-display');
+
+            // Playback speed options: 1.0, 1.25, 1.5, 2.0
+            const playbackSpeeds = [1.0, 1.25, 1.5, 2.0];
+            let currentSpeedIndex = parseInt(localStorage.getItem('learner_playback_speed_index')) || 0;
+            updatePlaybackSpeed(currentSpeedIndex);
+
+            function updatePlaybackSpeed(speedIndex) {
+                currentSpeedIndex = Math.max(0, Math.min(playbackSpeeds.length - 1, speedIndex));
+                const speed = playbackSpeeds[currentSpeedIndex];
+                playbackSpeedDisplay.textContent = speed + 'x';
+                localStorage.setItem('learner_playback_speed_index', currentSpeedIndex);
+
+                // Update global playback speed variable for audio elements
+                window.currentPlaybackSpeed = speed;
+            }
+
+            playbackSpeedDecrease.addEventListener('click', () => updatePlaybackSpeed(currentSpeedIndex - 1));
+            playbackSpeedIncrease.addEventListener('click', () => updatePlaybackSpeed(currentSpeedIndex + 1));
         }
 
         // API Key Status Functions
@@ -2953,6 +3019,11 @@
 
         // Load posts when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize global playback speed
+            const playbackSpeeds = [1.0, 1.25, 1.5, 2.0];
+            const savedSpeedIndex = parseInt(localStorage.getItem('learner_playback_speed_index')) || 0;
+            window.currentPlaybackSpeed = playbackSpeeds[savedSpeedIndex] || 1.0;
+
             setupOfflineSupport();
             loadPosts().then(() => {
                 setupSearch();
