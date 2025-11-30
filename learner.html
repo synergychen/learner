@@ -478,12 +478,90 @@
             color: #999;
         }
 
+        .mark-read-btn-bottom:hover {
+            background: #e0e0e0;
+        }
+
+        body.dark-mode .mark-read-btn-bottom:hover {
+            background: #555;
+        }
+
         body.dark-mode .menu-close:hover {
             color: #e0e0e0;
         }
 
-        body.dark-mode .menu-item:hover {
-            background: #333;
+        .youtube-embed-container {
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        body.dark-mode .youtube-embed-container {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .youtube-embed-container iframe {
+            display: block;
+            border-radius: 8px;
+        }
+
+        /* YouTube fallback styling */
+        .youtube-fallback {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .youtube-thumbnail-container {
+            position: relative;
+            width: 100%;
+            height: 315px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        .youtube-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.8;
+        }
+
+        .youtube-play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0.9;
+        }
+
+        .youtube-fallback-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 18px;
+            background: rgba(0,0,0,0.3);
+            transition: background 0.3s ease;
+        }
+
+        .youtube-fallback-link:hover {
+            background: rgba(0,0,0,0.5);
+            color: white;
+            text-decoration: none;
         }
 
         body.dark-mode .menu-item-label {
@@ -1260,6 +1338,14 @@
                 console.error('Error parsing markdown:', e);
                 // Fallback to plain text with line breaks
                 contentDiv.innerHTML = (post.summary || '').replace(/\n/g, '<br>');
+            }
+
+            // Add YouTube embed if video URL exists
+            if (post.videoUrl && post.videoUrl.trim()) {
+                const youtubeEmbed = createYouTubeEmbed(post.videoUrl);
+                if (youtubeEmbed) {
+                    contentDiv.appendChild(youtubeEmbed);
+                }
             }
 
             // Add bottom button to content
@@ -2181,6 +2267,98 @@
         // Function to detect if text contains Chinese characters
         function containsChinese(text) {
             return /[\u4e00-\u9fff]/.test(text);
+        }
+
+        // Function to extract YouTube video ID from URL
+        function extractYouTubeVideoId(url) {
+            if (!url) return null;
+
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+                /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+            ];
+
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+
+        // Function to create YouTube embed iframe with error handling
+        function createYouTubeEmbed(videoUrl) {
+            const videoId = extractYouTubeVideoId(videoUrl);
+            if (!videoId) return null;
+
+            const embedContainer = document.createElement('div');
+            embedContainer.className = 'youtube-embed-container';
+
+            // Create iframe with error handling
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${window.location.origin}`;
+            iframe.width = '100%';
+            iframe.height = '315';
+            iframe.frameBorder = '0';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            iframe.loading = 'lazy';
+            iframe.title = 'YouTube video player';
+
+            // Add error handling for iframe load failures
+            iframe.onerror = function() {
+                console.warn('YouTube embed failed, creating fallback link');
+                createYouTubeFallback(embedContainer, videoUrl, videoId);
+            };
+
+            // Also listen for load event to check if embed is blocked
+            iframe.onload = function() {
+                // Small delay to check if the iframe content loaded properly
+                setTimeout(() => {
+                    try {
+                        // If we can't access the iframe content, it might be blocked
+                        if (iframe.contentWindow && iframe.contentWindow.location.href === 'about:blank') {
+                            console.warn('YouTube embed may be blocked, showing fallback');
+                            createYouTubeFallback(embedContainer, videoUrl, videoId);
+                        }
+                    } catch (e) {
+                        // Cross-origin error is expected, iframe is working
+                    }
+                }, 1000);
+            };
+
+            embedContainer.appendChild(iframe);
+            return embedContainer;
+        }
+
+        // Function to create fallback YouTube link when embed fails
+        function createYouTubeFallback(container, videoUrl, videoId) {
+            // Clear the container
+            container.innerHTML = '';
+
+            // Create fallback link with thumbnail
+            const fallbackDiv = document.createElement('div');
+            fallbackDiv.className = 'youtube-fallback';
+            fallbackDiv.innerHTML = `
+                <div class="youtube-thumbnail-container">
+                    <img src="https://img.youtube.com/vi/${videoId}/maxresdefault.jpg"
+                         alt="YouTube video thumbnail"
+                         class="youtube-thumbnail"
+                         onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'">
+                    <div class="youtube-play-overlay">
+                        <svg width="68" height="48" viewBox="0 0 68 48">
+                            <path d="M66.52,7.74c-0.78-2.93-2.49-5.41-5.42-6.19C55.79,.13,34,0,34,0S12.21,.13,6.9,1.55 C3.97,2.33,2.27,4.81,1.48,7.74C0.06,13.05,0,24,0,24s0.06,10.95,1.48,16.26c0.78,2.93,2.49,5.41,5.42,6.19 C12.21,47.87,34,48,34,48s21.79-0.13,27.1-1.55c2.93-0.78,4.64-3.26,5.42-6.19C67.94,34.95,68,24,68,24S67.94,13.05,66.52,7.74z" fill="#f00"></path>
+                            <path d="M 45,24 27,14 27,34" fill="#fff"></path>
+                        </svg>
+                    </div>
+                    <a href="${videoUrl}" target="_blank" rel="noopener noreferrer" class="youtube-fallback-link">
+                        Watch on YouTube
+                    </a>
+                </div>
+            `;
+
+            container.appendChild(fallbackDiv);
         }
 
         // Function to calculate reading time based on word count (English) and character count (Chinese)
