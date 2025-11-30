@@ -1294,7 +1294,12 @@
                 Failed to load posts. Please try again later.
             </div>
 
-            <div id="posts-container">
+            <!-- Videos Content -->
+            <div id="videos-container" class="tab-content" style="display: none;">
+            </div>
+
+            <!-- Notes Content (Default) -->
+            <div id="notes-container" class="tab-content">
             </div>
 
             <div id="no-posts" class="no-posts" style="display: none;">
@@ -1312,6 +1317,17 @@
     <script>
         const SHEET_URL =
         'https://docs.google.com/spreadsheets/d/1a0SeElrZfwZ9w4LtrXAXssaDSDS-ZgKWPhAzi7GkY_U/gviz/tq?tqx=out:json&tq=&gid=1037605170';
+
+        const NOTES_URL =
+        'https://docs.google.com/spreadsheets/d/1a0SeElrZfwZ9w4LtrXAXssaDSDS-ZgKWPhAzi7GkY_U/gviz/tq?tqx=out:json&tq=&gid=1066334219';
+
+        // Data caching system
+        let cachedData = {
+            videos: null,
+            notes: null
+        };
+
+        let currentTab = 'notes'; // Default tab
 
         // Global callback function for JSONP
         window.googleSheetsCallback = function(data) {
@@ -1483,7 +1499,7 @@
             return postDiv;
         }
 
-        function loadPostsWithJSONP() {
+        function loadDataWithJSONP(url) {
             return new Promise((resolve, reject) => {
                 // Create a global callback function that Google Sheets will call
                 window.google = window.google || {};
@@ -1494,7 +1510,7 @@
                 };
 
                 const script = document.createElement('script');
-                script.src = SHEET_URL;
+                script.src = url;
                 script.onerror = () => {
                     document.head.removeChild(script);
                     reject(new Error('Failed to load data'));
@@ -1508,15 +1524,45 @@
             });
         }
 
-        async function loadPosts() {
-            const loadingElement = document.getElementById('loading');
-            const errorElement = document.getElementById('error');
-            const postsContainer = document.getElementById('posts-container');
-            const noPostsElement = document.getElementById('no-posts');
+        async function loadTabData(tabType) {
+            // Return cached data if available
+            if (cachedData[tabType]) {
+                return cachedData[tabType];
+            }
+
+            // Determine URL based on tab type
+            const url = tabType === 'videos' ? SHEET_URL : NOTES_URL;
 
             try {
-                const data = await loadPostsWithJSONP();
+                const data = await loadDataWithJSONP(url);
+                // Cache the data
+                cachedData[tabType] = data;
+                return data;
+            } catch (error) {
+                throw new Error(`Failed to load ${tabType} data: ${error.message}`);
+            }
+        }
+
+        async function renderTabContent(tabType) {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const container = document.getElementById(`${tabType}-container`);
+            const noPostsElement = document.getElementById('no-posts');
+
+            // Show loading if container is empty
+            if (!container.children.length) {
+                loadingElement.style.display = 'block';
+                errorElement.style.display = 'none';
+            }
+
+            try {
+                const data = await loadTabData(tabType);
                 loadingElement.style.display = 'none';
+
+                // If container already has content (cached), don't re-render
+                if (container.children.length > 0) {
+                    return;
+                }
 
                 if (!data.table || !data.table.rows) {
                     throw new Error('Invalid data structure');
@@ -1534,34 +1580,72 @@
                     }
                 });
 
-                const titleIndex = columnMap['video title'] ?? -1;
-                const urlIndex = columnMap['video url'] ?? -1;
-                const dateIndex = columnMap['added at'] ?? -1;
-                const publishedIndex = columnMap['published at'] ?? -1;
-                const summaryIndex = columnMap['summary'] ?? -1;
-                const readIndex = columnMap['read'] ?? -1;
+                // Different column mappings for Videos vs Notes
+                let titleIndex, urlIndex, dateIndex, publishedIndex, summaryIndex, readIndex, archiveIndex, starIndex;
+
+                if (tabType === 'videos') {
+                    titleIndex = columnMap['video title'] ?? -1;
+                    urlIndex = columnMap['video url'] ?? -1;
+                    dateIndex = columnMap['added at'] ?? -1;
+                    publishedIndex = columnMap['published at'] ?? -1;
+                    summaryIndex = columnMap['summary'] ?? -1;
+                    readIndex = columnMap['read'] ?? -1;
+                } else if (tabType === 'notes') {
+                    titleIndex = -1; // Notes don't have titles, we'll use first part of note content
+                    urlIndex = -1; // Notes don't have URLs
+                    dateIndex = columnMap['added at'] ?? -1;
+                    publishedIndex = -1; // Notes don't have published dates
+                    summaryIndex = columnMap['note'] ?? -1; // Main content is in 'note' column
+                    readIndex = -1; // Notes don't have read status
+                    archiveIndex = columnMap['archive'] ?? -1;
+                    starIndex = columnMap['star'] ?? -1;
+                }
 
                 // Process rows
                 rows.forEach(row => {
                     if (!row.c) return;
 
-                    const title = titleIndex >= 0 && row.c[titleIndex] ? row.c[titleIndex].v : '';
-                    const videoUrl = urlIndex >= 0 && row.c[urlIndex] ? row.c[urlIndex].v : '';
-                    const addedAt = dateIndex >= 0 && row.c[dateIndex] ? row.c[dateIndex].v : '';
-                    const publishedAt = publishedIndex >= 0 && row.c[publishedIndex] ? row.c[publishedIndex].v : '';
-                    const summary = summaryIndex >= 0 && row.c[summaryIndex] ? row.c[summaryIndex].v : '';
-                    const isRead = readIndex >= 0 && row.c[readIndex] ? (row.c[readIndex].v === 1 || row.c[readIndex].v === '1') : false;
+                    let title, videoUrl, addedAt, publishedAt, summary, isRead, isArchived, isStarred;
 
-                    // Only include posts with non-empty summaries
+                    if (tabType === 'videos') {
+                        title = titleIndex >= 0 && row.c[titleIndex] ? row.c[titleIndex].v : '';
+                        videoUrl = urlIndex >= 0 && row.c[urlIndex] ? row.c[urlIndex].v : '';
+                        addedAt = dateIndex >= 0 && row.c[dateIndex] ? row.c[dateIndex].v : '';
+                        publishedAt = publishedIndex >= 0 && row.c[publishedIndex] ? row.c[publishedIndex].v : '';
+                        summary = summaryIndex >= 0 && row.c[summaryIndex] ? row.c[summaryIndex].v : '';
+                        isRead = readIndex >= 0 && row.c[readIndex] ? (row.c[readIndex].v === 1 || row.c[readIndex].v === '1') : false;
+                    } else if (tabType === 'notes') {
+                        const noteContent = summaryIndex >= 0 && row.c[summaryIndex] ? row.c[summaryIndex].v : '';
+                        // Use first line or first 50 characters as title
+                        const lines = noteContent.split('\n');
+                        title = lines[0] ? (lines[0].length > 50 ? lines[0].substring(0, 50) + '...' : lines[0]) : 'Untitled Note';
+                        videoUrl = ''; // Notes don't have video URLs
+                        addedAt = dateIndex >= 0 && row.c[dateIndex] ? row.c[dateIndex].v : '';
+                        publishedAt = ''; // Notes don't have published dates
+                        summary = noteContent;
+                        isRead = false; // Notes don't have read status
+                        isArchived = archiveIndex >= 0 && row.c[archiveIndex] ? (row.c[archiveIndex].v === 1 || row.c[archiveIndex].v === '1') : false;
+                        isStarred = starIndex >= 0 && row.c[starIndex] ? (row.c[starIndex].v === 1 || row.c[starIndex].v === '1') : false;
+                    }
+
+                    // Only include posts with non-empty content
                     if (summary && summary.trim()) {
-                        posts.push({
+                        const post = {
                             title: title,
                             videoUrl: videoUrl,
                             addedAt: addedAt,
                             publishedAt: publishedAt,
                             summary: summary.trim(),
                             isRead: isRead
-                        });
+                        };
+
+                        // Add notes-specific properties
+                        if (tabType === 'notes') {
+                            post.isArchived = isArchived;
+                            post.isStarred = isStarred;
+                        }
+
+                        posts.push(post);
                     }
                 });
 
@@ -1580,15 +1664,20 @@
                 // Render posts
                 posts.forEach(post => {
                     const postElement = createPostElement(post);
-                    postsContainer.appendChild(postElement);
+                    container.appendChild(postElement);
                 });
 
             } catch (error) {
-                console.error('Error loading posts:', error);
+                console.error(`Error loading ${tabType}:`, error);
                 loadingElement.style.display = 'none';
                 errorElement.style.display = 'block';
-                errorElement.textContent = `Failed to load posts: ${error.message}`;
+                errorElement.textContent = `Failed to load ${tabType}: ${error.message}`;
             }
+        }
+
+        // Initialize with default tab (notes)
+        async function loadPosts() {
+            await renderTabContent('notes');
         }
 
         function toggleCollapse(postDiv) {
@@ -1862,11 +1951,12 @@
         // Search functionality
         function setupSearch() {
             const searchBar = document.getElementById('search-bar');
-            const postsContainer = document.getElementById('posts-container');
 
             searchBar.addEventListener('input', function() {
                 const searchTerm = this.value.toLowerCase().trim();
-                const posts = postsContainer.querySelectorAll('.blog-post');
+                // Get current tab container
+                const currentContainer = document.getElementById(`${currentTab}-container`);
+                const posts = currentContainer.querySelectorAll('.blog-post');
 
                 posts.forEach(post => {
                     const title = post.querySelector('.post-title').textContent.toLowerCase();
@@ -1884,7 +1974,6 @@
         // Collapse/Expand all functionality
         function setupCollapseAll() {
             const collapseAllBtn = document.getElementById('collapse-all-btn');
-            const postsContainer = document.getElementById('posts-container');
             let allCollapsed = false;
 
             function updateIcon() {
@@ -1903,7 +1992,9 @@
             }
 
             collapseAllBtn.addEventListener('click', function() {
-                const posts = postsContainer.querySelectorAll('.blog-post');
+                // Get current tab container
+                const currentContainer = document.getElementById(`${currentTab}-container`);
+                const posts = currentContainer.querySelectorAll('.blog-post');
 
                 if (allCollapsed) {
                     // Expand all
@@ -3179,22 +3270,45 @@
             }, { passive: true });
         }
 
-        function handleTabSwitch(tabType) {
+        async function handleTabSwitch(tabType) {
+            // Don't switch if already on the same tab
+            if (currentTab === tabType) return;
+
             console.log('Switched to tab:', tabType);
 
-            // For now, just log the tab switch
-            // Future implementation can show/hide different content based on tab
-            switch(tabType) {
-                case 'videos':
-                    // Show video content
-                    console.log('Showing videos content');
-                    break;
-                case 'notes':
-                    // Show notes content (current default view)
-                    console.log('Showing notes content');
-                    break;
-                default:
-                    console.log('Unknown tab type:', tabType);
+            // Update current tab
+            currentTab = tabType;
+
+            // Update tab button states
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabType}`).classList.add('active');
+
+            // Hide all tab content containers
+            document.querySelectorAll('.tab-content').forEach(container => {
+                container.style.display = 'none';
+            });
+
+            // Show the selected tab container
+            const targetContainer = document.getElementById(`${tabType}-container`);
+            targetContainer.style.display = 'block';
+
+            // Load content for the tab if not already loaded
+            await renderTabContent(tabType);
+
+            // Update search functionality to work with current tab
+            updateSearchForCurrentTab();
+        }
+
+        function updateSearchForCurrentTab() {
+            const searchBar = document.getElementById('search-bar');
+            if (searchBar) {
+                // Clear current search and re-setup for current tab
+                searchBar.value = '';
+                // Trigger search setup for current container
+                const event = new Event('input');
+                searchBar.dispatchEvent(event);
             }
         }
 
