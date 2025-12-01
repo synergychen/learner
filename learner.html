@@ -829,8 +829,36 @@
             line-height: 1.3;
         }
 
+        .post-title-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .blog-post.note-post .post-title {
             margin-bottom: 0;
+        }
+
+        .note-star-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #f0c419;
+            opacity: 0.8;
+        }
+
+        .note-star-btn:hover {
+            opacity: 1;
+        }
+
+        .note-star-btn svg {
+            width: 18px;
+            height: 18px;
+            pointer-events: none;
         }
 
         .post-title a {
@@ -1400,6 +1428,10 @@
                 titleElement.textContent = post.title || 'Untitled';
             }
 
+            const titleContainer = document.createElement('div');
+            titleContainer.className = 'post-title-container';
+            titleContainer.appendChild(titleElement);
+
             let listenBtn = null;
             let dateElement = null;
             if (!isNote) {
@@ -1471,7 +1503,38 @@
                 toggleCollapse(postDiv);
             });
 
-            headerDiv.appendChild(titleElement);
+            if (isNote && post.noteId) {
+                const starButton = document.createElement('button');
+                starButton.className = 'note-star-btn';
+                starButton.type = 'button';
+                starButton.setAttribute('aria-label', post.isStarred ? 'Unstar note' : 'Star note');
+                updateStarButtonIcon(starButton, Boolean(post.isStarred));
+
+                starButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const nextState = !post.isStarred;
+                    updateStarButtonIcon(starButton, nextState);
+                    starButton.setAttribute('aria-label', nextState ? 'Unstar note' : 'Star note');
+                    starButton.disabled = true;
+
+                    callStarWebhook(post.noteId, nextState)
+                        .then(() => {
+                            post.isStarred = nextState;
+                        })
+                        .catch(error => {
+                            console.error('Star webhook call failed:', error);
+                            updateStarButtonIcon(starButton, post.isStarred);
+                            starButton.setAttribute('aria-label', post.isStarred ? 'Unstar note' : 'Star note');
+                        })
+                        .finally(() => {
+                            starButton.disabled = false;
+                        });
+                });
+
+                titleContainer.appendChild(starButton);
+            }
+
+            headerDiv.appendChild(titleContainer);
 
             if (!isNote) {
                 listenBtn = document.createElement('button');
@@ -1898,6 +1961,38 @@
             })
             .catch(error => {
                 console.error('Archive webhook call error:', error);
+            });
+        }
+
+        function updateStarButtonIcon(button, isStarred) {
+            if (isStarred) {
+                button.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    </svg>
+                `;
+                button.classList.add('starred');
+            } else {
+                button.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+                button.classList.remove('starred');
+            }
+        }
+
+        function callStarWebhook(noteId, shouldStar) {
+            const starFlag = shouldStar ? 1 : 0;
+            const webhookUrl = `https://n8n.synergychen.com/webhook/0e0309d6-1c6c-4edf-baab-3205a01e9224?id=${encodeURIComponent(noteId)}&star=${starFlag}`;
+
+            return fetch(webhookUrl, {
+                method: 'GET'
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error(`Star webhook failed with status ${response.status}`);
+                }
+                return response;
             });
         }
 
