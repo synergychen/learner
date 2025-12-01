@@ -557,82 +557,93 @@ This document provides a comprehensive list of all features implemented in `lear
 
 ---
 
-## Testing Checklist
+## Testing Scenarios (Product Validation)
 
-Use this checklist when testing `learner.html`:
+Use these user stories and acceptance criteria to validate `learner.html` from a product perspective.
 
-### Initial Load
-- [ ] Page loads without errors
-- [ ] Videos tab loads and displays posts
-- [ ] Default dark theme is applied
-- [ ] Header shows "Learner"
-- [ ] Bottom tabs visible
+### 1. First Launch Experience
+- **User story**: As a learner opening the app, I immediately understand where I am and what content is available.
+- **Acceptance criteria**:
+  - App loads within a reasonable time without visible errors.
+  - The Videos tab is populated with the latest content on first view.
+  - The brand header reads "Learner" and the dark theme presents a cohesive first impression.
+  - Bottom navigation tabs are visible so users know there are multiple content types.
 
-### Navigation
-- [ ] Switch to Notes tab
-- [ ] Switch back to Videos tab
-- [ ] Scroll to verify tabs hide/show
-- [ ] Tap active tab scrolls to top
-- [ ] Header title updates on scroll
+### 2. Switching Between Content Types
+- **User story**: As a user moving between Videos and Notes, I never lose my place or feel disoriented.
+- **Acceptance criteria**:
+  - Tapping the Notes tab immediately reveals the notes list, preserving the previous Videos state.
+  - Returning to Videos restores the earlier scroll position.
+  - Re-selecting the active tab scrolls back to the top, reinforcing navigation control.
+  - The header always reflects the post currently under the sticky header while scrolling.
 
-### Post Interactions
-- [ ] Click post header to collapse/expand
-- [ ] Mark post as read (videos)
-- [ ] Mark post as unread (videos)
-- [ ] Archive note (notes)
-- [ ] Unarchive note (notes)
-- [ ] Verify auto-scroll to next post
+### 3. Managing Posts and Notes
+- **User story**: As a learner organizing my queue, I can quickly read through posts and archive notes without manual scrolling.
+- **Acceptance criteria**:
+  - Tapping a post header expands or collapses it without affecting other posts.
+  - Marking a video as read collapses it, dims the card, and automatically guides the user to the next unread item.
+  - Marking a video as unread re-opens the card so the learner can continue reviewing.
+  - Archiving or unarchiving a note updates its state, collapses/expands appropriately, and moves focus to the next note.
 
-### Search & Filter
-- [ ] Search for text in title
-- [ ] Search for text in content
-- [ ] Clear search
-- [ ] Switch tabs and verify search resets
+### 4. Finding Specific Information
+- **User story**: As someone searching for a topic, I can instantly filter posts without reloading the page.
+- **Acceptance criteria**:
+  - Typing in the search field filters the visible posts in the active tab in real time (title + content).
+  - Clearing the field restores the full list.
+  - Switching tabs automatically resets the search so each tab starts with its complete dataset.
 
-### Text-to-Speech
-- [ ] Configure API key
-- [ ] Play short content
-- [ ] Play long content (multiple chunks)
-- [ ] Pause audio
-- [ ] Resume audio
-- [ ] Switch to different post (stops previous)
-- [ ] Verify playback speed applies
+### 5. Listening to Content
+- **User story**: As a user who prefers audio, I can listen to any summary hands-free with clear controls.
+- **Acceptance criteria**:
+  - If no API key is stored, the interface prompts the user to configure it before playback.
+  - Playing short content begins within seconds and the button reflects the playing state.
+  - Long content begins streaming immediately while remaining audio keeps loading in the background.
+  - Pause/resume works predictably, and starting audio on a new post stops any other playback.
+  - Playback speed respects the setting chosen in the hamburger menu.
 
-### Settings
-- [ ] Toggle dark/light mode
-- [ ] Increase font size
-- [ ] Decrease font size
-- [ ] Change playback speed
-- [ ] Sync/reload page
-- [ ] Verify all settings persist
+### 6. Personalization & Persistence
+- **User story**: As someone tuning the interface, my preferences stick between sessions.
+- **Acceptance criteria**:
+  - Switching between dark and light modes immediately updates the UI and persists after refresh.
+  - Adjusting font size scales the entire interface proportionally and the chosen scale remains on reload.
+  - Changing playback speed updates both current and future audio sessions until the user chooses a different speed.
+  - Manual sync gives users confidence by refreshing the sheet data and clearing caches.
 
-### Text Highlighting
-- [ ] Select and highlight text
-- [ ] Remove highlight
-- [ ] Highlight across paragraphs
-- [ ] Highlight in lists
+### 7. Highlighting Key Takeaways
+- **User story**: As a learner capturing insights, I can highlight text snippets and remove them when done.
+- **Acceptance criteria**:
+  - Selecting a meaningful chunk of text surfaces the "Highlight" action near the selection.
+  - Confirming the action wraps the selection in the highlight style without breaking the layout (including lists).
+  - Tapping an existing highlight removes it and merges the text back into the paragraph.
 
-### Offline Support
-- [ ] Go offline
-- [ ] Mark posts as read
-- [ ] Go back online
-- [ ] Verify queued actions sync
+### 8. Staying Productive Offline
+- **User story**: As someone reviewing content without reliable internet, my actions are saved and synced later.
+- **Acceptance criteria**:
+  - When offline, marking items as read or archived shows a non-intrusive notice that the action will sync later.
+  - Coming back online automatically triggers a sync and confirms success (or warns about failures).
+  - Previously queued actions are cleared once the server acknowledges them.
 
-### YouTube Embeds
-- [ ] Videos display correctly
-- [ ] Embeds are responsive
-- [ ] Fallback works if needed
+### 9. Video Consumption
+- **User story**: As a viewer, embedded videos work wherever possible and always offer a fallback.
+- **Acceptance criteria**:
+  - Standard embedded videos play inline with responsive sizing and controls.
+  - If an embed fails (e.g., blocked), a thumbnail with a "Watch on YouTube" link appears so the user can continue externally.
+  - The experience is consistent across desktop and mobile layouts.
 
-### Responsive Design
-- [ ] Test on mobile viewport
-- [ ] Test on tablet viewport
-- [ ] Test on desktop viewport
-- [ ] Verify all features work on mobile
+### 10. Responsive Experience
+- **User story**: As a user switching devices, the experience feels native on mobile, tablet, and desktop.
+- **Acceptance criteria**:
+  - Mobile view prioritizes vertical reading with comfortable padding and reachable controls.
+  - Tablet view retains dual-purpose gestures (scroll + tap) without accidental actions.
+  - Desktop view makes use of available width without stretching content beyond readable limits.
+  - All key flows above remain achievable on each form factor.
 
-### Error Handling
-- [ ] Invalid API key shows error
-- [ ] Network errors handled gracefully
-- [ ] Empty states display correctly
+### 11. Resilience & Error Handling
+- **User story**: As a user, I’m never left wondering what went wrong.
+- **Acceptance criteria**:
+  - If the Google Sheet cannot load, the interface clearly states the issue and suggests a retry via the sync action.
+  - Missing or invalid TTS credentials produce actionable guidance instead of silent failures.
+  - Empty states explain why no content is visible and what to do next (e.g., add notes or adjust filters).
 
 ---
 

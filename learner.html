@@ -829,6 +829,10 @@
             line-height: 1.3;
         }
 
+        .blog-post.note-post .post-title {
+            margin-bottom: 0;
+        }
+
         .post-title a {
             color: inherit;
             text-decoration: none;
@@ -1322,33 +1326,51 @@
             window.sheetsData = data;
         };
 
-        function formatDate(dateString) {
+        function formatDate(dateString, includeTime = false) {
             if (!dateString) return 'No date';
 
             try {
+                let year, month, day, hours = 0, minutes = 0;
+                let hasTime = false;
+
                 // Handle Google Sheets date format: "Date(2025,10,30,17,31,0)" or "Date(2025,10,17)"
                 if (typeof dateString === 'string' && dateString.startsWith('Date(')) {
-                    const match = dateString.match(/Date\((\d+),(\d+),(\d+)(?:,\d+,\d+,\d+)?\)/);
+                    const match = dateString.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
                     if (match) {
-                        const year = parseInt(match[1]);
-                        const month = parseInt(match[2]) + 1; // Google Sheets months are 0-indexed, so add 1
-                        const day = parseInt(match[3]);
+                        year = parseInt(match[1]);
+                        month = parseInt(match[2]) + 1; // Google Sheets months are 0-indexed, so add 1
+                        day = parseInt(match[3]);
 
-                        // Format as YYYY/MM/DD
-                        const formattedMonth = month.toString().padStart(2, '0');
-                        const formattedDay = day.toString().padStart(2, '0');
-                        return `${year}/${formattedMonth}/${formattedDay}`;
+                        if (match[4] !== undefined) {
+                            hours = parseInt(match[4]);
+                            minutes = parseInt(match[5]);
+                            hasTime = true;
+                        }
                     }
                 }
 
-                const date = new Date(dateString);
-                if (isNaN(date.getTime())) return dateString;
+                if (year === undefined) {
+                    const date = new Date(dateString);
+                    if (isNaN(date.getTime())) return dateString;
+                    year = date.getFullYear();
+                    month = date.getMonth() + 1;
+                    day = date.getDate();
+                    hours = date.getHours();
+                    minutes = date.getMinutes();
+                    hasTime = true;
+                }
 
-                // Format as YYYY/MM/DD
-                const year = date.getFullYear();
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                const day = date.getDate().toString().padStart(2, '0');
-                return `${year}/${month}/${day}`;
+                const formattedMonth = month.toString().padStart(2, '0');
+                const formattedDay = day.toString().padStart(2, '0');
+                const datePart = `${year}/${formattedMonth}/${formattedDay}`;
+
+                if (includeTime && hasTime) {
+                    const formattedHours = hours.toString().padStart(2, '0');
+                    const formattedMinutes = minutes.toString().padStart(2, '0');
+                    return `${datePart} ${formattedHours}:${formattedMinutes}`;
+                }
+
+                return datePart;
             } catch (e) {
                 return dateString;
             }
@@ -1363,8 +1385,11 @@
 
             const titleElement = document.createElement('h1');
             titleElement.className = 'post-title';
+            const isNote = post.tabType === 'notes';
 
-            if (post.videoUrl && post.videoUrl.trim()) {
+            if (isNote) {
+                titleElement.textContent = formatDate(post.addedAt, true) || 'No date';
+            } else if (post.videoUrl && post.videoUrl.trim()) {
                 const titleLink = document.createElement('a');
                 titleLink.href = post.videoUrl;
                 titleLink.target = '_blank';
@@ -1375,20 +1400,28 @@
                 titleElement.textContent = post.title || 'Untitled';
             }
 
-            const dateElement = document.createElement('div');
-            dateElement.className = 'post-date';
-            let dateText = `Added: ${formatDate(post.addedAt)}`;
-            if (post.publishedAt) {
-                dateText += `\nPublished: ${formatDate(post.publishedAt)}`;
+            let listenBtn = null;
+            let dateElement = null;
+            if (!isNote) {
+                dateElement = document.createElement('div');
+                dateElement.className = 'post-date';
+
+                let dateText = `Added: ${formatDate(post.addedAt)}`;
+                if (post.publishedAt) {
+                    dateText += `\nPublished: ${formatDate(post.publishedAt)}`;
+                }
+
+                const readingTime = calculateReadingTime(post.summary || '');
+                dateText += `\n${readingTime}`;
+
+                dateElement.textContent = dateText;
             }
 
-            // Calculate and add reading time
-            const readingTime = calculateReadingTime(post.summary || '');
-            dateText += `\n${readingTime}`;
-
-            dateElement.textContent = dateText;
-
             // Initialize post state based on post.isRead or post.isArchived
+            if (isNote) {
+                postDiv.classList.add('note-post');
+            }
+
             if (post.isRead || post.isArchived) {
                 postDiv.classList.add('read');
                 // Read/archived posts start collapsed
@@ -1429,7 +1462,10 @@
             // Add click handler to header for collapse/expand
             headerDiv.addEventListener('click', function(e) {
                 // Don't trigger if clicking on buttons
-                if (e.target === markReadBtnBottom || e.target === listenBtn || e.target.closest('.listen-btn')) {
+                if (e.target === markReadBtnBottom) {
+                    return;
+                }
+                if (listenBtn && (e.target === listenBtn || e.target.closest('.listen-btn'))) {
                     return;
                 }
                 toggleCollapse(postDiv);
@@ -1437,31 +1473,30 @@
 
             headerDiv.appendChild(titleElement);
 
-            // Create listen button
-            const listenBtn = document.createElement('button');
-            listenBtn.className = 'listen-btn';
-            listenBtn.innerHTML = `
-                <svg width="14" height="14" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
-                </svg>
-            `;
+            if (!isNote) {
+                listenBtn = document.createElement('button');
+                listenBtn.className = 'listen-btn';
+                listenBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                `;
 
-            // Store post data and speech state on the button
-            listenBtn.postData = post;
-            listenBtn.speechState = {
-                audio: null,
-                isPlaying: false,
-                isPaused: false
-            };
+                listenBtn.postData = post;
+                listenBtn.speechState = {
+                    audio: null,
+                    isPlaying: false,
+                    isPaused: false
+                };
 
-            // Add click handler for listen functionality
-            listenBtn.addEventListener('click', function(e) {
-                e.stopPropagation(); // Prevent header click event
-                toggleSpeech(listenBtn);
-            });
+                listenBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleSpeech(listenBtn);
+                });
 
-            dateElement.appendChild(listenBtn);
-            headerDiv.appendChild(dateElement);
+                dateElement.appendChild(listenBtn);
+                headerDiv.appendChild(dateElement);
+            }
 
             // Add YouTube embed to header if video URL exists
             if (post.videoUrl && post.videoUrl.trim()) {
@@ -1640,7 +1675,8 @@
                             addedAt: addedAt,
                             publishedAt: publishedAt,
                             summary: summary.trim(),
-                            isRead: isRead
+                            isRead: isRead,
+                            tabType: tabType
                         };
 
                         // Add notes-specific properties
