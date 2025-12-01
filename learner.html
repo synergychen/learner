@@ -2406,6 +2406,16 @@
             });
         }
 
+        // Reset header title to default when switching tabs
+        function resetHeaderTitle() {
+            const headerTitle = document.getElementById('header-title');
+            const headerMenu = document.getElementById('header-menu');
+            const originalTitle = 'Learner';
+
+            headerTitle.textContent = originalTitle;
+            headerMenu.style.display = 'flex'; // Show settings icon
+        }
+
         // Sync functionality is now handled in hamburger menu
 
         // Google Cloud Text-to-Speech API configuration
@@ -3371,6 +3381,9 @@
 
             // Load content for the tab if not already loaded
             await renderTabContent(tabType);
+
+            // Reset header title when switching tabs
+            resetHeaderTitle();
 
             // Update search functionality to work with current tab
             updateSearchForCurrentTab();
