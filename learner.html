@@ -1520,11 +1520,13 @@
                     callStarWebhook(post.noteId, nextState)
                         .then(() => {
                             post.isStarred = nextState;
+                            showSyncNotification('Synced');
                         })
                         .catch(error => {
                             console.error('Star webhook call failed:', error);
                             updateStarButtonIcon(starButton, post.isStarred);
                             starButton.setAttribute('aria-label', post.isStarred ? 'Unstar note' : 'Star note');
+                            showSyncNotification('Failed');
                         })
                         .finally(() => {
                             starButton.disabled = false;
