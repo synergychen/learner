@@ -1883,7 +1883,8 @@
                 return;
             }
 
-            const webhookUrl = `https://n8n.synergychen.com/webhook/19e8e145-f9fb-4b1c-aae9-13d0b91c83a6?id=${encodeURIComponent(noteId)}`;
+            const archivedFlag = isArchived ? 1 : 0;
+            const webhookUrl = `https://n8n.synergychen.com/webhook/19e8e145-f9fb-4b1c-aae9-13d0b91c83a6?id=${encodeURIComponent(noteId)}&archived=${archivedFlag}`;
 
             fetch(webhookUrl, {
                 method: 'GET'
