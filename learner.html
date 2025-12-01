@@ -202,37 +202,6 @@
             border-color: #071df5 transparent transparent transparent;
         }
 
-        .scroll-to-top {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 50px;
-            height: 50px;
-            background: #071df5;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            transition: all 0.3s ease;
-            z-index: 1000;
-            opacity: 0.7;
-        }
-
-        .scroll-to-top:hover {
-            background: #071df5;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-            opacity: 1;
-        }
-
-        .scroll-to-top.show {
-            display: flex;
-        }
-
         .search-container {
             flex: 1;
             min-width: 200px;
@@ -983,6 +952,14 @@
             margin-bottom: 8px;
         }
 
+        .post-content ol {
+            margin-left: 15px;
+        }
+
+        .post-content ol li::marker {
+            color: #6a78f8;
+        }
+
         .post-content blockquote {
             border-left: 4px solid #071df5;
             margin: 20px 0;
@@ -1324,11 +1301,6 @@
         </div>
     </div>
 
-    <button class="scroll-to-top" id="scroll-to-top" title="Scroll to top">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7 14L12 9L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </button>
 
     <script>
         const SHEET_URL =
@@ -2371,27 +2343,6 @@
             }
         }
 
-        // Scroll to top functionality
-        function setupScrollToTop() {
-            const scrollToTopBtn = document.getElementById('scroll-to-top');
-
-            // Show/hide button based on scroll position
-            window.addEventListener('scroll', function() {
-                if (window.pageYOffset > 300) {
-                    scrollToTopBtn.classList.add('show');
-                } else {
-                    scrollToTopBtn.classList.remove('show');
-                }
-            });
-
-            // Scroll to top when clicked
-            scrollToTopBtn.addEventListener('click', function() {
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
-            });
-        }
 
         // Header title update functionality
         function setupHeaderTitleUpdate() {
@@ -3310,7 +3261,6 @@
                 setupSearch();
                 setupCollapseAll();
                 setupTextHighlighting();
-                setupScrollToTop();
                 setupHeaderTitleUpdate();
                 setupHamburgerMenu();
                 setupApiKeyModal();
@@ -3326,14 +3276,26 @@
 
             tabItems.forEach(tab => {
                 tab.addEventListener('click', () => {
+                    // Get tab type
+                    const tabType = tab.dataset.tab;
+
+                    // Check if clicking on already active tab
+                    const isAlreadyActive = tab.classList.contains('active');
+
+                    if (isAlreadyActive) {
+                        // Scroll to top if clicking on active tab
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                        return;
+                    }
+
                     // Remove active class from all tabs
                     tabItems.forEach(t => t.classList.remove('active'));
 
                     // Add active class to clicked tab
                     tab.classList.add('active');
-
-                    // Get tab type
-                    const tabType = tab.dataset.tab;
 
                     // Handle tab switching logic
                     handleTabSwitch(tabType);
