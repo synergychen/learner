@@ -1310,12 +1310,12 @@
                 Failed to load posts. Please try again later.
             </div>
 
-            <!-- Videos Content -->
-            <div id="videos-container" class="tab-content" style="display: none;">
+            <!-- Videos Content (Default) -->
+            <div id="videos-container" class="tab-content">
             </div>
 
-            <!-- Notes Content (Default) -->
-            <div id="notes-container" class="tab-content">
+            <!-- Notes Content -->
+            <div id="notes-container" class="tab-content" style="display: none;">
             </div>
 
             <div id="no-posts" class="no-posts" style="display: none;">
@@ -1343,7 +1343,7 @@
             notes: null
         };
 
-        let currentTab = 'notes'; // Default tab
+        let currentTab = 'videos'; // Default tab
 
         // Global callback function for JSONP
         window.googleSheetsCallback = function(data) {
@@ -1611,7 +1611,7 @@
                 });
 
                 // Different column mappings for Videos vs Notes
-                let titleIndex, urlIndex, dateIndex, publishedIndex, summaryIndex, readIndex, archiveIndex, starIndex;
+                let titleIndex, urlIndex, dateIndex, publishedIndex, summaryIndex, readIndex, archiveIndex, starIndex, idIndex;
 
                 if (tabType === 'videos') {
                     titleIndex = columnMap['video title'] ?? -1;
@@ -1627,15 +1627,16 @@
                     publishedIndex = -1; // Notes don't have published dates
                     summaryIndex = columnMap['note'] ?? -1; // Main content is in 'note' column
                     readIndex = -1; // Notes don't have read status
-                    archiveIndex = columnMap['archive'] ?? -1;
+                    archiveIndex = columnMap['archived'] ?? -1;
                     starIndex = columnMap['star'] ?? -1;
+                    idIndex = columnMap['id'] ?? -1; // ID field for webhook functionality
                 }
 
                 // Process rows
                 rows.forEach(row => {
                     if (!row.c) return;
 
-                    let title, videoUrl, addedAt, publishedAt, summary, isRead, isArchived, isStarred;
+                    let title, videoUrl, addedAt, publishedAt, summary, isRead, isArchived, isStarred, noteId;
 
                     if (tabType === 'videos') {
                         title = titleIndex >= 0 && row.c[titleIndex] ? row.c[titleIndex].v : '';
@@ -1656,6 +1657,7 @@
                         isRead = false; // Notes don't have read status
                         isArchived = archiveIndex >= 0 && row.c[archiveIndex] ? (row.c[archiveIndex].v === 1 || row.c[archiveIndex].v === '1') : false;
                         isStarred = starIndex >= 0 && row.c[starIndex] ? (row.c[starIndex].v === 1 || row.c[starIndex].v === '1') : false;
+                        noteId = idIndex >= 0 && row.c[idIndex] ? row.c[idIndex].v : null;
                     }
 
                     // Only include posts with non-empty content
@@ -1673,6 +1675,7 @@
                         if (tabType === 'notes') {
                             post.isArchived = isArchived;
                             post.isStarred = isStarred;
+                            post.noteId = noteId;
                         }
 
                         posts.push(post);
@@ -1705,9 +1708,9 @@
             }
         }
 
-        // Initialize with default tab (notes)
+        // Initialize with default tab (videos)
         async function loadPosts() {
-            await renderTabContent('notes');
+            await renderTabContent('videos');
         }
 
         function toggleCollapse(postDiv) {
@@ -1830,6 +1833,11 @@
                 // Update post object
                 post.isArchived = false;
 
+                // Call webhook for unarchive
+                if (post.noteId) {
+                    callArchiveWebhook(post.noteId, false);
+                }
+
                 console.log('Note unarchived');
             } else {
                 // Archive - collapse
@@ -1843,6 +1851,11 @@
                 // Update post object
                 post.isArchived = true;
 
+                // Call webhook for archive
+                if (post.noteId) {
+                    callArchiveWebhook(post.noteId, true);
+                }
+
                 console.log('Note archived');
 
                 // Scroll to next post after archiving
@@ -1853,6 +1866,30 @@
 
             // Clear cached notes data to reflect changes
             cachedData.notes = null;
+        }
+
+        // Call archive webhook for Notes
+        function callArchiveWebhook(noteId, isArchived) {
+            if (!noteId) {
+                console.error('No note ID provided for archive webhook');
+                return;
+            }
+
+            const webhookUrl = `https://n8n.synergychen.com/webhook/19e8e145-f9fb-4b1c-aae9-13d0b91c83a6?id=${encodeURIComponent(noteId)}`;
+
+            fetch(webhookUrl, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log(`Archive webhook called successfully for note ${noteId}, archived: ${isArchived}`);
+                } else {
+                    console.error('Archive webhook call failed:', response.status);
+                }
+            })
+            .catch(error => {
+                console.error('Archive webhook call error:', error);
+            });
         }
 
         // Offline queue management
@@ -2360,15 +2397,19 @@
         function setupHeaderTitleUpdate() {
             const headerTitle = document.getElementById('header-title');
             const headerMenu = document.getElementById('header-menu');
-            const posts = document.querySelectorAll('.blog-post');
             let currentPost = null;
             const originalTitle = 'Learner';
-
-            if (posts.length === 0) return;
 
             window.addEventListener('scroll', function() {
                 const scrollTop = window.pageYOffset;
                 currentPost = null;
+
+                // Get posts from the currently active tab container
+                const activeContainer = document.getElementById(`${currentTab}-container`);
+                if (!activeContainer) return;
+
+                const posts = activeContainer.querySelectorAll('.blog-post');
+                if (posts.length === 0) return;
 
                 // Calculate the bottom position of the fixed header
                 const headerHeight = 70; // Header height with padding
@@ -2404,6 +2445,7 @@
             // Click handler for header title to scroll to current post
             headerTitle.addEventListener('click', function() {
                 if (currentPost && headerTitle.textContent !== originalTitle) {
+                    const headerHeight = 70; // Header height with padding
                     const offset = currentPost.offsetTop - headerHeight;
                     window.scrollTo({
                         top: offset,
@@ -3387,14 +3429,14 @@
 
     <!-- Bottom Tab Navigation -->
     <div class="bottom-tabs">
-        <button class="tab-item" id="tab-videos" data-tab="videos">
+        <button class="tab-item active" id="tab-videos" data-tab="videos">
             <svg class="tab-icon" viewBox="0 0 24 24">
                 <polygon points="23 7 16 12 23 17 23 7"></polygon>
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
             </svg>
             <span class="tab-label">Videos</span>
         </button>
-        <button class="tab-item active" id="tab-notes" data-tab="notes">
+        <button class="tab-item" id="tab-notes" data-tab="notes">
             <svg class="tab-icon" viewBox="0 0 24 24">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14,2 14,8 20,8"></polyline>
