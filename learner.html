@@ -2167,21 +2167,28 @@
             const searchBar = document.getElementById('search-bar');
 
             searchBar.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase().trim();
-                // Get current tab container
-                const currentContainer = document.getElementById(`${currentTab}-container`);
-                const posts = currentContainer.querySelectorAll('.blog-post');
+                applyCurrentSearchFilter();
+            });
+        }
 
-                posts.forEach(post => {
-                    const title = post.querySelector('.post-title').textContent.toLowerCase();
-                    const content = post.querySelector('.post-content').textContent.toLowerCase();
+        function applyCurrentSearchFilter() {
+            const searchBar = document.getElementById('search-bar');
+            if (!searchBar) return;
 
-                    if (searchTerm === '' || title.includes(searchTerm) || content.includes(searchTerm)) {
-                        post.style.display = '';
-                    } else {
-                        post.style.display = 'none';
-                    }
-                });
+            const searchTerm = searchBar.value.toLowerCase().trim();
+            const currentContainer = document.getElementById(`${currentTab}-container`);
+            if (!currentContainer) return;
+
+            const posts = currentContainer.querySelectorAll('.blog-post');
+            posts.forEach(post => {
+                const title = post.querySelector('.post-title').textContent.toLowerCase();
+                const content = post.querySelector('.post-content').textContent.toLowerCase();
+
+                if (searchTerm === '' || title.includes(searchTerm) || content.includes(searchTerm)) {
+                    post.style.display = '';
+                } else {
+                    post.style.display = 'none';
+                }
             });
         }
 
@@ -3430,6 +3437,7 @@
                             top: 0,
                             behavior: 'smooth'
                         });
+                        refreshTab(tabType);
                         return;
                     }
 
@@ -3519,6 +3527,33 @@
 
             // Update search functionality to work with current tab
             updateSearchForCurrentTab();
+        }
+
+        async function refreshTab(tabType) {
+            console.log('Refreshing tab:', tabType);
+            cachedData[tabType] = null;
+
+            const container = document.getElementById(`${tabType}-container`);
+            if (container) {
+                container.innerHTML = '';
+            }
+
+            const noPostsElement = document.getElementById('no-posts');
+            if (noPostsElement) {
+                noPostsElement.style.display = 'none';
+            }
+
+            try {
+                await renderTabContent(tabType);
+                if (currentTab === tabType) {
+                    resetHeaderTitle();
+                    applyCurrentSearchFilter();
+                    showSyncNotification('Synced');
+                }
+            } catch (error) {
+                console.error(`Error refreshing ${tabType}:`, error);
+                showSyncNotification('Failed');
+            }
         }
 
         function updateSearchForCurrentTab() {
