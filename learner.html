@@ -3531,20 +3531,32 @@
 
         async function refreshTab(tabType) {
             console.log('Refreshing tab:', tabType);
+            if (!isOnline) {
+                console.warn('Offline - skipping refresh');
+                showOfflineNotification('You\'re offline. Showing cached content.');
+                showSyncNotification('Failed');
+                return;
+            }
+
             cachedData[tabType] = null;
 
             const container = document.getElementById(`${tabType}-container`);
-            if (container) {
-                container.innerHTML = '';
-            }
-
-            const noPostsElement = document.getElementById('no-posts');
-            if (noPostsElement) {
-                noPostsElement.style.display = 'none';
-            }
+            const previousContent = container ? container.innerHTML : '';
 
             try {
+                await loadTabData(tabType);
+
+                const noPostsElement = document.getElementById('no-posts');
+                if (noPostsElement) {
+                    noPostsElement.style.display = 'none';
+                }
+
+                if (container) {
+                    container.innerHTML = '';
+                }
+
                 await renderTabContent(tabType);
+
                 if (currentTab === tabType) {
                     resetHeaderTitle();
                     applyCurrentSearchFilter();
@@ -3552,6 +3564,9 @@
                 }
             } catch (error) {
                 console.error(`Error refreshing ${tabType}:`, error);
+                if (container && previousContent !== undefined) {
+                    container.innerHTML = previousContent;
+                }
                 showSyncNotification('Failed');
             }
         }
