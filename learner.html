@@ -839,6 +839,75 @@
             margin-bottom: 0;
         }
 
+        .floating-nav {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            background: transparent;
+            padding: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 900;
+        }
+
+        .floating-nav.visible {
+            opacity: 0.85;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .floating-nav.visible.scrolling {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .floating-nav button {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 2px solid #4a7cff;
+            background: rgba(20, 25, 45, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4a7cff;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .floating-nav button:hover {
+            background: rgba(30, 40, 70, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .floating-nav button svg {
+            width: 18px;
+            height: 18px;
+            pointer-events: none;
+            stroke: currentColor;
+        }
+
+        .floating-nav button.mark-action {
+            background: #4a7cff;
+            color: #ffffff;
+            border-color: #4a7cff;
+        }
+
+        .floating-nav button.mark-action:hover {
+            background: #3a6cef;
+            border-color: #3a6cef;
+        }
+
+        .floating-nav button.mark-action.completed {
+            background: #28a745;
+            border-color: #28a745;
+        }
+
         .note-star-btn {
             background: none;
             border: none;
@@ -1331,6 +1400,24 @@
                 No posts with summaries found.
             </div>
         </div>
+    </div>
+
+    <div class="floating-nav" id="floating-nav">
+        <button id="floating-prev" aria-label="Previous article">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="15 18 9 12 15 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+        <button id="floating-mark" class="mark-action" aria-label="Mark as read">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+        <button id="floating-next" aria-label="Next article">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="9 18 15 12 9 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
     </div>
 
 
@@ -2189,6 +2276,121 @@
                 } else {
                     post.style.display = 'none';
                 }
+            });
+        }
+
+        // Floating nav functionality
+        function setupFloatingNav() {
+            const floatingNav = document.getElementById('floating-nav');
+            const prevBtn = document.getElementById('floating-prev');
+            const markBtn = document.getElementById('floating-mark');
+            const nextBtn = document.getElementById('floating-next');
+            const bottomTabs = document.querySelector('.bottom-tabs');
+            let scrollTimeout = null;
+
+            function updateVisibility() {
+                if (!floatingNav) return;
+                const hasPosts = document.querySelector(`#${currentTab}-container .blog-post`);
+                const tabsHidden = bottomTabs && bottomTabs.classList.contains('hidden');
+                if (hasPosts && tabsHidden) {
+                    floatingNav.classList.add('visible');
+                } else {
+                    floatingNav.classList.remove('visible');
+                }
+                updateFloatingMarkState();
+            }
+
+            function handleScroll() {
+                updateVisibility();
+                floatingNav.classList.add('scrolling');
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    floatingNav.classList.remove('scrolling');
+                }, 1000);
+            }
+
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            window.addEventListener('resize', updateVisibility);
+
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const current = getCurrentVisiblePost();
+                if (current) {
+                    scrollToAdjacentPost(current, -1);
+                }
+            });
+
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const current = getCurrentVisiblePost();
+                if (current) {
+                    scrollToAdjacentPost(current, 1);
+                }
+            });
+
+            markBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const current = getCurrentVisiblePost();
+                if (!current) return;
+                const bottomBtn = current.querySelector('.mark-read-btn-bottom');
+                if (bottomBtn) {
+                    bottomBtn.click();
+                    updateFloatingMarkState();
+                }
+            });
+
+            updateVisibility();
+        }
+
+        function updateFloatingMarkState() {
+            const markBtn = document.getElementById('floating-mark');
+            if (!markBtn) return;
+            const current = getCurrentVisiblePost();
+            if (!current) {
+                markBtn.classList.remove('completed');
+                markBtn.setAttribute('aria-label', 'Mark as read');
+                return;
+            }
+            const isNote = current.classList.contains('note-post');
+            const isMarked = current.classList.contains('read');
+            const label = isNote
+                ? (isMarked ? 'Unarchive note' : 'Archive note')
+                : (isMarked ? 'Mark as unread' : 'Mark as read');
+            markBtn.setAttribute('aria-label', label);
+            markBtn.title = label;
+            markBtn.classList.toggle('completed', isMarked);
+        }
+
+        function getCurrentVisiblePost() {
+            const activeContainer = document.getElementById(`${currentTab}-container`);
+            if (!activeContainer) return null;
+            const posts = Array.from(activeContainer.querySelectorAll('.blog-post'));
+            if (!posts.length) return null;
+            const viewportMiddle = window.scrollY + window.innerHeight / 2;
+            return posts.reduce((closest, post) => {
+                const rect = post.getBoundingClientRect();
+                const postMiddle = rect.top + window.scrollY + rect.height / 2;
+                const distance = Math.abs(postMiddle - viewportMiddle);
+                if (!closest || distance < closest.distance) {
+                    return { element: post, distance };
+                }
+                return closest;
+            }, null)?.element || posts[0] || null;
+        }
+
+        function scrollToAdjacentPost(currentPostDiv, direction) {
+            if (!currentPostDiv || typeof direction !== 'number') return;
+            const container = currentPostDiv.closest('.tab-content');
+            const posts = container ? Array.from(container.querySelectorAll('.blog-post')) : [];
+            if (!posts.length) return;
+            const currentIndex = posts.indexOf(currentPostDiv);
+            const target = posts[currentIndex + direction];
+            if (!target) return;
+            const offset = target.offsetTop - 20;
+
+            window.scrollTo({
+                top: offset,
+                behavior: 'smooth'
             });
         }
 
@@ -3416,6 +3618,7 @@
                 updateApiKeyStatus();
                 setupBottomTabs();
                 setupBottomTabsScrollBehavior();
+                setupFloatingNav();
             });
         });
 
