@@ -843,7 +843,7 @@
             position: fixed;
             left: 50%;
             transform: translateX(-50%);
-            bottom: 30px;
+            bottom: 80px;
             display: flex;
             align-items: center;
             gap: 40px;
@@ -851,7 +851,7 @@
             padding: 0;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.2s ease, transform 0.2s ease, bottom 0.3s ease;
             z-index: 900;
         }
 
@@ -864,6 +864,10 @@
         .floating-nav.visible.scrolling {
             opacity: 0;
             pointer-events: none;
+        }
+
+        .floating-nav.tabs-visible {
+            bottom: 80px;
         }
 
         .floating-nav button {
@@ -2292,8 +2296,10 @@
                 if (!floatingNav) return;
                 const hasPosts = document.querySelector(`#${currentTab}-container .blog-post`);
                 const tabsHidden = bottomTabs && bottomTabs.classList.contains('hidden');
-                if (hasPosts && tabsHidden) {
+
+                if (hasPosts) {
                     floatingNav.classList.add('visible');
+                    floatingNav.classList.toggle('tabs-visible', !tabsHidden);
                 } else {
                     floatingNav.classList.remove('visible');
                 }
