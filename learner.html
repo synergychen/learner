@@ -2338,6 +2338,18 @@
                 e.stopPropagation();
                 const current = getCurrentVisiblePost();
                 if (!current) return;
+
+                // Check if audio is playing - if so, pause it instead of marking as read
+                const listenBtn = current.querySelector('.listen-btn');
+                const isAudioPlaying = listenBtn?.speechState?.isPlaying && !listenBtn?.speechState?.isPaused;
+
+                if (isAudioPlaying) {
+                    // Pause the audio by clicking the listen button
+                    listenBtn.click();
+                    updateFloatingMarkState();
+                    return;
+                }
+
                 const bottomBtn = current.querySelector('.mark-read-btn-bottom');
                 if (bottomBtn) {
                     bottomBtn.click();
@@ -2353,10 +2365,26 @@
             if (!markBtn) return;
             const current = getCurrentVisiblePost();
             if (!current) {
-                markBtn.classList.remove('completed');
+                markBtn.classList.remove('completed', 'audio-playing');
                 markBtn.setAttribute('aria-label', 'Mark as read');
+                setFloatingMarkIcon(markBtn, 'check');
                 return;
             }
+
+            // Check if audio is playing for this post
+            const listenBtn = current.querySelector('.listen-btn');
+            const isAudioPlaying = listenBtn?.speechState?.isPlaying && !listenBtn?.speechState?.isPaused;
+
+            if (isAudioPlaying) {
+                markBtn.classList.add('audio-playing');
+                markBtn.classList.remove('completed');
+                markBtn.setAttribute('aria-label', 'Pause audio');
+                markBtn.title = 'Pause audio';
+                setFloatingMarkIcon(markBtn, 'pause');
+                return;
+            }
+
+            markBtn.classList.remove('audio-playing');
             const isNote = current.classList.contains('note-post');
             const isMarked = current.classList.contains('read');
             const label = isNote
@@ -2365,6 +2393,24 @@
             markBtn.setAttribute('aria-label', label);
             markBtn.title = label;
             markBtn.classList.toggle('completed', isMarked);
+            setFloatingMarkIcon(markBtn, 'check');
+        }
+
+        function setFloatingMarkIcon(markBtn, type) {
+            if (type === 'pause') {
+                markBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="7" y="5" width="1" height="14" rx="1" />
+                        <rect x="14.5" y="5" width="1" height="14" rx="1" />
+                    </svg>
+                `;
+            } else {
+                markBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 13l4 4L19 7" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                `;
+            }
         }
 
         function getCurrentVisiblePost() {
@@ -2812,6 +2858,7 @@
                         <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
                     </svg>
                 `;
+                updateFloatingMarkState();
             } else if (speechState.isPaused) {
                 // Resume paused audio (works for both single and streaming audio)
                 if (speechState.audioQueueManager) {
@@ -2832,6 +2879,7 @@
                         <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
                     </svg>
                 `;
+                updateFloatingMarkState();
             } else {
                 // Check if API key is configured
                 if (!GOOGLE_CLOUD_TTS_CONFIG.apiKey) {
@@ -2893,6 +2941,9 @@
                             </svg>
                         `;
 
+                        // Update floating mark button to show pause icon
+                        updateFloatingMarkState();
+
                         // Start streaming playback
                         await audioQueueManager.playFirstChunk();
 
@@ -2918,9 +2969,13 @@
                             </svg>
                         `;
 
+                        // Update floating mark button to show pause icon
+                        updateFloatingMarkState();
+
                         // Handle audio end
                         audio.onended = function() {
                             resetButton(button);
+                            updateFloatingMarkState();
                         };
 
                         // Handle audio error
@@ -3394,6 +3449,7 @@
                 console.log(`%c🎵 Playback complete (${this.streamingResult.totalChunks} chunks)`, 'font-weight: bold; color: #4CAF50', `(total: ${this.totalPlayTime.toFixed(1)}s)`);
                 resetButton(this.button);
                 this.isDestroyed = true;
+                updateFloatingMarkState();
             }
         }
 
