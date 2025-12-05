@@ -3279,12 +3279,16 @@
                 this.isPlaying = false;
                 this.isPaused = false;
                 this.isDestroyed = false;
+                this.chunkStartTime = null;
+                this.totalPlayTime = 0;
             }
 
             async playFirstChunk() {
                 if (this.isDestroyed) return;
 
-                console.log('Playing first chunk');
+                const chunkBytes = new TextEncoder().encode(this.streamingResult.chunks[0]).length;
+                console.log(`%c🔊 Playing chunk 1/${this.streamingResult.totalChunks}`, 'color: #9C27B0', `(${chunkBytes.toLocaleString()} bytes)`);
+                this.chunkStartTime = performance.now();
                 const audio = new Audio();
                 audio.src = `data:audio/mp3;base64,${this.streamingResult.firstChunk}`;
                 audio.playbackRate = window.currentPlaybackSpeed || 1.0;
@@ -3304,7 +3308,9 @@
             async onChunkEnded() {
                 if (this.isDestroyed) return;
 
-                console.log(`Chunk ${this.currentChunkIndex + 1} ended`);
+                const playDuration = ((performance.now() - this.chunkStartTime) / 1000).toFixed(1);
+                this.totalPlayTime += parseFloat(playDuration);
+                console.log(`%c⏹ Chunk ${this.currentChunkIndex + 1} ended`, 'color: #607D8B', `(played ${playDuration}s)`);
 
                 // Check if there are more chunks to play
                 if (this.currentChunkIndex + 1 < this.streamingResult.totalChunks) {
@@ -3320,13 +3326,14 @@
                 if (this.isDestroyed) return;
 
                 const nextChunkIndex = this.currentChunkIndex + 1;
-                console.log(`Attempting to play chunk ${nextChunkIndex + 1}`);
 
                 // Find the next chunk in the queue
                 const nextChunk = this.streamingResult.audioQueue.find(chunk => chunk.index === nextChunkIndex);
 
                 if (nextChunk) {
-                    console.log(`Playing chunk ${nextChunkIndex + 1}`);
+                    const chunkBytes = new TextEncoder().encode(nextChunk.text).length;
+                    console.log(`%c🔊 Playing chunk ${nextChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #9C27B0', `(${chunkBytes.toLocaleString()} bytes)`);
+                    this.chunkStartTime = performance.now();
                     const audio = new Audio();
                     audio.src = `data:audio/mp3;base64,${nextChunk.audioContent}`;
                     audio.playbackRate = window.currentPlaybackSpeed || 1.0;
@@ -3340,7 +3347,7 @@
                     await audio.play();
                 } else {
                     // Chunk not ready yet, wait and retry
-                    console.log(`Chunk ${nextChunkIndex + 1} not ready, waiting...`);
+                    console.log(`%c⏳ Chunk ${nextChunkIndex + 1} not ready, waiting...`, 'color: #FF9800');
                     setTimeout(() => this.playNextChunk(), 500);
                 }
             }
@@ -3350,7 +3357,7 @@
                     this.currentAudio.pause();
                     this.isPlaying = false;
                     this.isPaused = true;
-                    console.log(`Paused at chunk ${this.currentChunkIndex + 1}`);
+                    console.log(`%c⏸ Paused at chunk ${this.currentChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #FF9800');
                 }
             }
 
@@ -3359,7 +3366,7 @@
                     await this.currentAudio.play();
                     this.isPlaying = true;
                     this.isPaused = false;
-                    console.log(`Resumed chunk ${this.currentChunkIndex + 1}`);
+                    console.log(`%c▶️ Resumed chunk ${this.currentChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #4CAF50');
                 }
             }
 
@@ -3371,16 +3378,16 @@
                 this.isPlaying = false;
                 this.isPaused = false;
                 this.isDestroyed = true;
-                console.log('Audio queue stopped');
+                console.log(`%c⏹ Audio stopped`, 'color: #f44336');
             }
 
             onAudioError() {
-                console.error(`Audio error in chunk ${this.currentChunkIndex + 1}`);
+                console.error(`%c✗ Audio error in chunk ${this.currentChunkIndex + 1}`, 'color: #f44336');
                 this.onAllChunksFinished();
             }
 
             onAllChunksFinished() {
-                console.log('Streaming audio playback completed');
+                console.log(`%c🎵 Playback complete (${this.streamingResult.totalChunks} chunks)`, 'font-weight: bold; color: #4CAF50', `(total: ${this.totalPlayTime.toFixed(1)}s)`);
                 resetButton(this.button);
                 this.isDestroyed = true;
             }
