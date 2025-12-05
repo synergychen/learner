@@ -3124,13 +3124,24 @@
         async function synthesizeChunkedAudio(text, voice) {
             console.log('Starting streaming chunked synthesis for long text');
 
-            // Split text into chunks that fit within the API limit
-            const chunks = splitTextIntoChunks(text, GOOGLE_CLOUD_TTS_CONFIG.maxTextBytes);
-            console.log(`Split text into ${chunks.length} chunks`);
+            // Split text into chunks with progressive sizes for faster first playback
+            // First chunk: 1000 bytes, second: 2000 bytes, rest: maxTextBytes (4000)
+            const chunks = splitTextIntoChunksProgressive(text, [1000, 2000, GOOGLE_CLOUD_TTS_CONFIG.maxTextBytes]);
+
+            // Log chunk breakdown
+            console.log(`%c📦 Audio Chunks: ${chunks.length} total`, 'font-weight: bold');
+            chunks.forEach((chunk, i) => {
+                const bytes = new TextEncoder().encode(chunk).length;
+                console.log(`   Chunk ${i + 1}: ${bytes.toLocaleString()} bytes`);
+            });
 
             // Synthesize first chunk immediately
-            console.log('Synthesizing first chunk immediately');
+            const firstChunkBytes = new TextEncoder().encode(chunks[0]).length;
+            console.log(`%c▶️ Processing chunk 1/${chunks.length}`, 'color: #4CAF50', `(${firstChunkBytes.toLocaleString()} bytes)`);
+            const startTime = performance.now();
             const firstChunk = await synthesizeShortAudio(chunks[0], voice);
+            const elapsed = (performance.now() - startTime).toFixed(0);
+            console.log(`%c✓ Chunk 1 ready`, 'color: #4CAF50', `${elapsed}ms`);
 
             // Create streaming audio result with first chunk and background processing
             const streamingResult = {
@@ -3155,41 +3166,57 @@
 
         // Background processing of remaining chunks
         async function processRemainingChunks(streamingResult, remainingChunks, voice) {
+            const totalStart = performance.now();
+
             for (let i = 0; i < remainingChunks.length; i++) {
                 const chunkIndex = i + 1; // +1 because first chunk is already processed
-                console.log(`Background processing chunk ${chunkIndex + 1}/${streamingResult.totalChunks}`);
+                const chunkNum = chunkIndex + 1;
+                const chunkBytes = new TextEncoder().encode(remainingChunks[i]).length;
+                console.log(`%c▶️ Processing chunk ${chunkNum}/${streamingResult.totalChunks}`, 'color: #2196F3', `(${chunkBytes.toLocaleString()} bytes)`);
 
                 try {
+                    const startTime = performance.now();
                     const audioContent = await synthesizeShortAudio(remainingChunks[i], voice);
+                    const elapsed = (performance.now() - startTime).toFixed(0);
+
                     streamingResult.audioQueue.push({
                         index: chunkIndex,
                         audioContent: audioContent,
                         text: remainingChunks[i]
                     });
 
-                    console.log(`Chunk ${chunkIndex + 1} ready for playback`);
+                    console.log(`%c✓ Chunk ${chunkNum} ready`, 'color: #2196F3', `${elapsed}ms`);
 
                     // Small delay between requests to avoid rate limiting
                     if (i < remainingChunks.length - 1) {
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
                 } catch (error) {
-                    console.error(`Failed to synthesize background chunk ${chunkIndex + 1}:`, error);
+                    console.error(`%c✗ Chunk ${chunkNum} failed:`, 'color: #f44336', error.message);
                     // Continue processing other chunks even if one fails
                 }
             }
 
+            const totalElapsed = ((performance.now() - totalStart) / 1000).toFixed(1);
             streamingResult.isProcessing = false;
-            console.log('All chunks processed and ready for streaming playback');
+            console.log(`%c🎵 All ${streamingResult.totalChunks} chunks ready`, 'font-weight: bold; color: #4CAF50', `(total: ${totalElapsed}s)`);
         }
 
-        // Function to split text into chunks that fit within byte limit
-        function splitTextIntoChunks(text, maxBytes) {
+        // Function to split text into chunks with progressive byte limits
+        // chunkSizes: array of max bytes for each chunk [first, second, ...rest]
+        function splitTextIntoChunksProgressive(text, chunkSizes) {
             const chunks = [];
             const sentences = text.split(/[.!?。！？]\s+/);
             let currentChunk = '';
+            let chunkIndex = 0;
+
+            function getMaxBytes() {
+                // Use the last size for all chunks beyond the specified sizes
+                return chunkSizes[Math.min(chunkIndex, chunkSizes.length - 1)];
+            }
 
             for (const sentence of sentences) {
+                const maxBytes = getMaxBytes();
                 const testChunk = currentChunk + (currentChunk ? '. ' : '') + sentence;
                 const testBytes = new TextEncoder().encode(testChunk).length;
 
@@ -3199,6 +3226,7 @@
                     // If current chunk has content, save it and start new chunk
                     if (currentChunk) {
                         chunks.push(currentChunk + '.');
+                        chunkIndex++;
                         currentChunk = sentence;
                     } else {
                         // Single sentence is too long, split by words
@@ -3206,18 +3234,21 @@
                         let wordChunk = '';
 
                         for (const word of words) {
+                            const currentMaxBytes = getMaxBytes();
                             const testWordChunk = wordChunk + (wordChunk ? ' ' : '') + word;
                             const testWordBytes = new TextEncoder().encode(testWordChunk).length;
 
-                            if (testWordBytes <= maxBytes) {
+                            if (testWordBytes <= currentMaxBytes) {
                                 wordChunk = testWordChunk;
                             } else {
                                 if (wordChunk) {
                                     chunks.push(wordChunk);
+                                    chunkIndex++;
                                     wordChunk = word;
                                 } else {
                                     // Single word is too long, truncate it
-                                    chunks.push(word.substring(0, maxBytes / 4)); // Rough estimate
+                                    chunks.push(word.substring(0, currentMaxBytes / 4)); // Rough estimate
+                                    chunkIndex++;
                                     wordChunk = '';
                                 }
                             }
