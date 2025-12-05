@@ -3136,10 +3136,12 @@
             });
 
             // Synthesize first chunk immediately
-            const firstChunkBytes = new TextEncoder().encode(chunks[0]).length;
+            // Replace periods with Chinese periods for better TTS pauses
+            const firstChunkText = chunks[0].replace(/\./g, '。');
+            const firstChunkBytes = new TextEncoder().encode(firstChunkText).length;
             console.log(`%c▶️ Processing chunk 1/${chunks.length}`, 'color: #4CAF50', `(${firstChunkBytes.toLocaleString()} bytes)`);
             const startTime = performance.now();
-            const firstChunk = await synthesizeShortAudio(chunks[0], voice);
+            const firstChunk = await synthesizeShortAudio(firstChunkText, voice);
             const elapsed = (performance.now() - startTime).toFixed(0);
             console.log(`%c✓ Chunk 1 ready`, 'color: #4CAF50', `${elapsed}ms`);
 
@@ -3176,7 +3178,9 @@
 
                 try {
                     const startTime = performance.now();
-                    const audioContent = await synthesizeShortAudio(remainingChunks[i], voice);
+                    // Replace periods with Chinese periods for better TTS pauses
+                    const chunkText = remainingChunks[i].replace(/\./g, '。');
+                    const audioContent = await synthesizeShortAudio(chunkText, voice);
                     const elapsed = (performance.now() - startTime).toFixed(0);
 
                     streamingResult.audioQueue.push({
