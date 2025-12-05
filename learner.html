@@ -2336,19 +2336,20 @@
 
             markBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+
+                // Check if ANY audio is playing - if so, pause it instead of marking as read
+                const allListenButtons = document.querySelectorAll('.listen-btn');
+                for (const btn of allListenButtons) {
+                    if (btn.speechState?.isPlaying && !btn.speechState?.isPaused) {
+                        // Pause the audio by clicking the listen button
+                        btn.click();
+                        updateFloatingMarkState();
+                        return;
+                    }
+                }
+
                 const current = getCurrentVisiblePost();
                 if (!current) return;
-
-                // Check if audio is playing - if so, pause it instead of marking as read
-                const listenBtn = current.querySelector('.listen-btn');
-                const isAudioPlaying = listenBtn?.speechState?.isPlaying && !listenBtn?.speechState?.isPaused;
-
-                if (isAudioPlaying) {
-                    // Pause the audio by clicking the listen button
-                    listenBtn.click();
-                    updateFloatingMarkState();
-                    return;
-                }
 
                 const bottomBtn = current.querySelector('.mark-read-btn-bottom');
                 if (bottomBtn) {
@@ -2363,24 +2364,31 @@
         function updateFloatingMarkState() {
             const markBtn = document.getElementById('floating-mark');
             if (!markBtn) return;
-            const current = getCurrentVisiblePost();
-            if (!current) {
-                markBtn.classList.remove('completed', 'audio-playing');
-                markBtn.setAttribute('aria-label', 'Mark as read');
-                setFloatingMarkIcon(markBtn, 'check');
-                return;
+
+            // Check if ANY audio is playing
+            const allListenButtons = document.querySelectorAll('.listen-btn');
+            let anyAudioPlaying = false;
+            for (const btn of allListenButtons) {
+                if (btn.speechState?.isPlaying && !btn.speechState?.isPaused) {
+                    anyAudioPlaying = true;
+                    break;
+                }
             }
 
-            // Check if audio is playing for this post
-            const listenBtn = current.querySelector('.listen-btn');
-            const isAudioPlaying = listenBtn?.speechState?.isPlaying && !listenBtn?.speechState?.isPaused;
-
-            if (isAudioPlaying) {
+            if (anyAudioPlaying) {
                 markBtn.classList.add('audio-playing');
                 markBtn.classList.remove('completed');
                 markBtn.setAttribute('aria-label', 'Pause audio');
                 markBtn.title = 'Pause audio';
                 setFloatingMarkIcon(markBtn, 'pause');
+                return;
+            }
+
+            const current = getCurrentVisiblePost();
+            if (!current) {
+                markBtn.classList.remove('completed', 'audio-playing');
+                markBtn.setAttribute('aria-label', 'Mark as read');
+                setFloatingMarkIcon(markBtn, 'check');
                 return;
             }
 
