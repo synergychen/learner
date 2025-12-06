@@ -2430,7 +2430,7 @@
             const markBtn = document.getElementById('floating-mark');
             if (!markBtn) return;
 
-            // Check if ANY audio is playing or paused
+            // Check if ANY audio is playing or paused (for header audio control only)
             const allListenButtons = document.querySelectorAll('.listen-btn');
             let anyAudioPlaying = false;
             let anyAudioPaused = false;
@@ -2451,19 +2451,12 @@
             // Update header audio control
             updateHeaderAudioControl(anyAudioPlaying, anyAudioPaused, activeListenButton);
 
-            if (anyAudioPlaying) {
-                markBtn.classList.add('audio-playing');
-                markBtn.classList.remove('completed');
-                markBtn.setAttribute('aria-label', 'Pause audio');
-                markBtn.title = 'Pause audio';
-                setFloatingMarkIcon(markBtn, 'pause');
-                return;
-            }
-
+            // Floating mark button always shows checkmark (mark as read)
             const current = getCurrentVisiblePost();
             if (!current) {
                 markBtn.classList.remove('completed', 'audio-playing');
                 markBtn.setAttribute('aria-label', 'Mark as read');
+                markBtn.title = 'Mark as read';
                 setFloatingMarkIcon(markBtn, 'check');
                 return;
             }
