@@ -159,6 +159,41 @@
         .header-menu svg { stroke-width: 1.5; }
         .header-menu:hover { background: rgba(255, 255, 255, 0.1); }
 
+        /* Header audio control */
+        .header-audio-control {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            margin-right: 15px;
+        }
+
+        .header-audio-control.visible {
+            display: flex;
+        }
+
+        .header-audio-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease;
+        }
+
+        .header-audio-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .header-audio-btn.playing {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
         /* Add top padding to body to account for fixed header */
         body {
             padding-top: 70px;
@@ -1287,6 +1322,15 @@
     <!-- Fixed Header -->
     <div class="header">
         <h1 class="header-title" id="header-title">Learner</h1>
+        <!-- Header Audio Control - shown when audio is playing -->
+        <div class="header-audio-control" id="header-audio-control">
+            <button class="header-audio-btn" id="header-audio-btn" title="Pause/Play audio">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                    <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                </svg>
+            </button>
+        </div>
         <button class="header-menu" id="header-menu" title="Settings">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
@@ -2386,15 +2430,26 @@
             const markBtn = document.getElementById('floating-mark');
             if (!markBtn) return;
 
-            // Check if ANY audio is playing
+            // Check if ANY audio is playing or paused
             const allListenButtons = document.querySelectorAll('.listen-btn');
             let anyAudioPlaying = false;
+            let anyAudioPaused = false;
+            let activeListenButton = null;
+
             for (const btn of allListenButtons) {
                 if (btn.speechState?.isPlaying && !btn.speechState?.isPaused) {
                     anyAudioPlaying = true;
+                    activeListenButton = btn;
                     break;
                 }
+                if (btn.speechState?.isPaused) {
+                    anyAudioPaused = true;
+                    activeListenButton = btn;
+                }
             }
+
+            // Update header audio control
+            updateHeaderAudioControl(anyAudioPlaying, anyAudioPaused, activeListenButton);
 
             if (anyAudioPlaying) {
                 markBtn.classList.add('audio-playing');
@@ -2423,6 +2478,45 @@
             markBtn.title = label;
             markBtn.classList.toggle('completed', isMarked);
             setFloatingMarkIcon(markBtn, 'check');
+        }
+
+        // Update header audio control visibility and state
+        function updateHeaderAudioControl(isPlaying, isPaused, activeButton) {
+            const headerControl = document.getElementById('header-audio-control');
+            const headerBtn = document.getElementById('header-audio-btn');
+            if (!headerControl || !headerBtn) return;
+
+            // Store reference to active button for click handler
+            headerBtn._activeListenButton = activeButton;
+
+            if (isPlaying || isPaused) {
+                headerControl.classList.add('visible');
+
+                if (isPlaying) {
+                    // Show pause icon when playing
+                    headerBtn.classList.add('playing');
+                    headerBtn.title = 'Pause audio';
+                    headerBtn.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                            <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                        </svg>
+                    `;
+                } else {
+                    // Show play icon when paused
+                    headerBtn.classList.remove('playing');
+                    headerBtn.title = 'Resume audio';
+                    headerBtn.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                    `;
+                }
+            } else {
+                // Hide when no audio active
+                headerControl.classList.remove('visible');
+                headerBtn._activeListenButton = null;
+            }
         }
 
         function setFloatingMarkIcon(markBtn, type) {
@@ -3956,6 +4050,7 @@
             window.currentPlaybackSpeed = playbackSpeeds[savedSpeedIndex] || 1.0;
 
             setupOfflineSupport();
+            setupHeaderAudioButton();
             loadPosts().then(() => {
                 setupSearch();
                 setupCollapseAll();
@@ -3969,6 +4064,23 @@
                 setupFloatingNav();
             });
         });
+
+        // Setup header audio button click handler
+        function setupHeaderAudioButton() {
+            const headerBtn = document.getElementById('header-audio-btn');
+            if (!headerBtn) return;
+
+            headerBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+
+                // Get the active listen button reference
+                const activeListenBtn = headerBtn._activeListenButton;
+                if (activeListenBtn) {
+                    // Trigger the same toggle as clicking the listen button
+                    toggleSpeech(activeListenBtn);
+                }
+            });
+        }
 
         // Bottom Tab Navigation Setup
         function setupBottomTabs() {
