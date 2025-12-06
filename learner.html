@@ -161,15 +161,10 @@
 
         /* Header audio control */
         .header-audio-control {
-            display: none;
+            display: flex;
             align-items: center;
             gap: 8px;
             margin-left: auto;
-            margin-right: 15px;
-        }
-
-        .header-audio-control.visible {
-            display: flex;
         }
 
         .header-audio-btn {
@@ -2430,26 +2425,8 @@
             const markBtn = document.getElementById('floating-mark');
             if (!markBtn) return;
 
-            // Check if ANY audio is playing or paused (for header audio control only)
-            const allListenButtons = document.querySelectorAll('.listen-btn');
-            let anyAudioPlaying = false;
-            let anyAudioPaused = false;
-            let activeListenButton = null;
-
-            for (const btn of allListenButtons) {
-                if (btn.speechState?.isPlaying && !btn.speechState?.isPaused) {
-                    anyAudioPlaying = true;
-                    activeListenButton = btn;
-                    break;
-                }
-                if (btn.speechState?.isPaused) {
-                    anyAudioPaused = true;
-                    activeListenButton = btn;
-                }
-            }
-
-            // Update header audio control
-            updateHeaderAudioControl(anyAudioPlaying, anyAudioPaused, activeListenButton);
+            // Update header audio control based on current visible post
+            updateHeaderAudioControl();
 
             // Floating mark button always shows checkmark (mark as read)
             const current = getCurrentVisiblePost();
@@ -2473,42 +2450,74 @@
             setFloatingMarkIcon(markBtn, 'check');
         }
 
-        // Update header audio control visibility and state
-        function updateHeaderAudioControl(isPlaying, isPaused, activeButton) {
+        // Update header audio control state based on current visible post
+        function updateHeaderAudioControl() {
             const headerControl = document.getElementById('header-audio-control');
             const headerBtn = document.getElementById('header-audio-btn');
-            if (!headerControl || !headerBtn) return;
+            const headerTitle = document.getElementById('header-title');
+            if (!headerBtn || !headerControl) return;
 
-            // Store reference to active button for click handler
-            headerBtn._activeListenButton = activeButton;
-
-            if (isPlaying || isPaused) {
-                headerControl.classList.add('visible');
-
-                if (isPlaying) {
-                    // Show pause icon when playing
-                    headerBtn.classList.add('playing');
-                    headerBtn.title = 'Pause audio';
-                    headerBtn.innerHTML = `
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
-                            <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
-                        </svg>
-                    `;
-                } else {
-                    // Show play icon when paused
-                    headerBtn.classList.remove('playing');
-                    headerBtn.title = 'Resume audio';
-                    headerBtn.innerHTML = `
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
-                        </svg>
-                    `;
-                }
-            } else {
-                // Hide when no audio active
-                headerControl.classList.remove('visible');
+            // Hide audio control when header shows "Learner" (no post title)
+            const isShowingPostTitle = headerTitle && headerTitle.textContent !== 'Learner';
+            if (!isShowingPostTitle) {
+                headerControl.style.display = 'none';
                 headerBtn._activeListenButton = null;
+                return;
+            }
+            headerControl.style.display = 'flex';
+
+            // Get the current visible post
+            const currentPost = getCurrentVisiblePost();
+            if (!currentPost) {
+                // No visible post - show play icon
+                headerBtn.classList.remove('playing');
+                headerBtn.title = 'Play audio';
+                headerBtn._activeListenButton = null;
+                setHeaderAudioIcon(headerBtn, 'play');
+                return;
+            }
+
+            // Find the listen button for the current visible post
+            const listenBtn = currentPost.querySelector('.listen-btn');
+            headerBtn._activeListenButton = listenBtn;
+
+            if (!listenBtn || !listenBtn.speechState) {
+                // No listen button or no speech state - show play icon
+                headerBtn.classList.remove('playing');
+                headerBtn.title = 'Play audio';
+                setHeaderAudioIcon(headerBtn, 'play');
+                return;
+            }
+
+            const { isPlaying, isPaused } = listenBtn.speechState;
+
+            if (isPlaying && !isPaused) {
+                // Current post's audio is playing - show pause icon
+                headerBtn.classList.add('playing');
+                headerBtn.title = 'Pause audio';
+                setHeaderAudioIcon(headerBtn, 'pause');
+            } else {
+                // Current post's audio is not playing (or paused) - show play icon
+                headerBtn.classList.remove('playing');
+                headerBtn.title = isPaused ? 'Resume audio' : 'Play audio';
+                setHeaderAudioIcon(headerBtn, 'play');
+            }
+        }
+
+        function setHeaderAudioIcon(btn, type) {
+            if (type === 'pause') {
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                        <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                    </svg>
+                `;
+            } else {
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                `;
             }
         }
 
