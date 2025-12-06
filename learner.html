@@ -501,6 +501,23 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
 
+        /* Text tracking highlight for audio playback */
+        .speech-tracking-segment {
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 4px;
+            padding: 2px 0;
+        }
+
+        .speech-tracking-segment.current-speech {
+            background-color: rgba(106, 120, 248, 0.15);
+            box-shadow: -4px 0 0 rgba(106, 120, 248, 0.5);
+        }
+
+        body.dark-mode .speech-tracking-segment.current-speech {
+            background-color: rgba(106, 120, 248, 0.25);
+            box-shadow: -4px 0 0 rgba(106, 120, 248, 0.7);
+        }
+
         .youtube-embed-container iframe {
             position: absolute;
             top: 0;
@@ -2917,6 +2934,14 @@
                     textToSpeak = `Overview. ${contentText.trim()}`;
                 }
 
+                // Set up text tracking for scroll-along feature
+                if (contentDiv) {
+                    setupTextTracking(contentDiv);
+                    speechState.contentDiv = contentDiv;
+                    // Highlight first segment immediately
+                    highlightSegment(contentDiv, 0);
+                }
+
                 try {
                     // Update button to loading state
                     button.classList.add('loading');
@@ -2937,7 +2962,7 @@
                         // Streaming audio with multiple chunks
                         console.log(`Starting streaming playback with ${audioResult.totalChunks} chunks`);
 
-                        const audioQueueManager = new AudioQueueManager(audioResult, button);
+                        const audioQueueManager = new AudioQueueManager(audioResult, button, contentDiv);
                         speechState.audioQueueManager = audioQueueManager;
                         speechState.audio = null; // Clear single audio reference
 
@@ -2984,8 +3009,27 @@
                         // Update floating mark button to show pause icon
                         updateFloatingMarkState();
 
+                        // Set up text tracking for single audio
+                        if (contentDiv && contentDiv._totalChars) {
+                            let lastSegmentIndex = -1;
+                            audio.ontimeupdate = function() {
+                                const charPos = estimateCharPosition(
+                                    audio.currentTime,
+                                    audio.duration,
+                                    contentDiv._totalChars,
+                                    audio.playbackRate
+                                );
+                                const segmentIndex = findSegmentByCharPosition(contentDiv, charPos);
+                                if (segmentIndex !== lastSegmentIndex) {
+                                    lastSegmentIndex = segmentIndex;
+                                    highlightSegment(contentDiv, segmentIndex);
+                                }
+                            };
+                        }
+
                         // Handle audio end
                         audio.onended = function() {
+                            clearTextTracking(contentDiv);
                             resetButton(button);
                             updateFloatingMarkState();
                         };
@@ -2993,6 +3037,7 @@
                         // Handle audio error
                         audio.onerror = function() {
                             console.error('Audio playback error');
+                            clearTextTracking(contentDiv);
                             resetButton(button);
                         };
 
@@ -3012,6 +3057,127 @@
         // Function to detect if text contains Chinese characters
         function containsChinese(text) {
             return /[\u4e00-\u9fff]/.test(text);
+        }
+
+        // Text tracking for audio playback - wraps content in trackable segments
+        function setupTextTracking(contentDiv) {
+            // Skip if already set up
+            if (contentDiv.dataset.trackingSetup === 'true') {
+                return getTrackingSegments(contentDiv);
+            }
+
+            const segments = [];
+            let segmentIndex = 0;
+
+            // Process all text-containing elements (paragraphs, list items, headings)
+            const textElements = contentDiv.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, blockquote');
+
+            textElements.forEach(element => {
+                // Skip elements inside tables
+                if (element.closest('table')) return;
+
+                // Get the text content for tracking
+                const text = element.textContent.trim();
+                if (!text) return;
+
+                // Wrap the element content in a tracking span
+                const wrapper = document.createElement('span');
+                wrapper.className = 'speech-tracking-segment';
+                wrapper.dataset.segmentIndex = segmentIndex;
+                wrapper.dataset.segmentText = text;
+
+                // Move all children into the wrapper
+                while (element.firstChild) {
+                    wrapper.appendChild(element.firstChild);
+                }
+                element.appendChild(wrapper);
+
+                segments.push({
+                    index: segmentIndex,
+                    element: wrapper,
+                    text: text,
+                    charStart: segmentIndex === 0 ? 0 : segments[segmentIndex - 1].charEnd,
+                    charEnd: 0 // Will be calculated below
+                });
+                segmentIndex++;
+            });
+
+            // Calculate character positions for each segment
+            let totalChars = 0;
+            segments.forEach(segment => {
+                segment.charStart = totalChars;
+                totalChars += segment.text.length;
+                segment.charEnd = totalChars;
+            });
+
+            contentDiv.dataset.trackingSetup = 'true';
+            contentDiv._trackingSegments = segments;
+            contentDiv._totalChars = totalChars;
+
+            return segments;
+        }
+
+        // Get existing tracking segments
+        function getTrackingSegments(contentDiv) {
+            return contentDiv._trackingSegments || [];
+        }
+
+        // Highlight current segment and scroll to it
+        function highlightSegment(contentDiv, segmentIndex) {
+            const segments = getTrackingSegments(contentDiv);
+
+            // Remove highlight from all segments
+            segments.forEach(seg => {
+                seg.element.classList.remove('current-speech');
+            });
+
+            // Add highlight to current segment
+            if (segmentIndex >= 0 && segmentIndex < segments.length) {
+                const currentSegment = segments[segmentIndex];
+                currentSegment.element.classList.add('current-speech');
+
+                // Scroll to the segment smoothly
+                currentSegment.element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }
+
+        // Find segment index based on character position
+        function findSegmentByCharPosition(contentDiv, charPosition) {
+            const segments = getTrackingSegments(contentDiv);
+
+            for (let i = 0; i < segments.length; i++) {
+                if (charPosition >= segments[i].charStart && charPosition < segments[i].charEnd) {
+                    return i;
+                }
+            }
+
+            // Return last segment if position is beyond all segments
+            return segments.length - 1;
+        }
+
+        // Clear all text tracking highlights
+        function clearTextTracking(contentDiv) {
+            if (!contentDiv) return;
+
+            const segments = getTrackingSegments(contentDiv);
+            segments.forEach(seg => {
+                seg.element.classList.remove('current-speech');
+            });
+        }
+
+        // Estimate character position based on audio time
+        // Uses average speaking rate of ~150 words per minute (~12.5 chars/second for English)
+        function estimateCharPosition(currentTime, duration, totalChars, playbackRate = 1.0) {
+            if (duration <= 0) return 0;
+
+            // Calculate progress through the audio
+            const progress = currentTime / duration;
+
+            // Estimate character position based on progress
+            return Math.floor(progress * totalChars);
         }
 
         // Function to extract YouTube video ID from URL
@@ -3342,9 +3508,10 @@
 
         // Audio queue manager for streaming playback
         class AudioQueueManager {
-            constructor(streamingResult, button) {
+            constructor(streamingResult, button, contentDiv) {
                 this.streamingResult = streamingResult;
                 this.button = button;
+                this.contentDiv = contentDiv;
                 this.currentAudio = null;
                 this.currentChunkIndex = 0;
                 this.isPlaying = false;
@@ -3352,6 +3519,52 @@
                 this.isDestroyed = false;
                 this.chunkStartTime = null;
                 this.totalPlayTime = 0;
+                this.lastSegmentIndex = -1;
+
+                // Calculate character ranges for each chunk for text tracking
+                this.chunkCharRanges = this.calculateChunkCharRanges();
+            }
+
+            // Calculate character start/end positions for each audio chunk
+            calculateChunkCharRanges() {
+                const ranges = [];
+                let charOffset = 0;
+
+                for (let i = 0; i < this.streamingResult.chunks.length; i++) {
+                    const chunkText = this.streamingResult.chunks[i];
+                    const charLength = chunkText.length;
+                    ranges.push({
+                        start: charOffset,
+                        end: charOffset + charLength
+                    });
+                    charOffset += charLength;
+                }
+
+                return ranges;
+            }
+
+            // Set up text tracking for current audio
+            setupTextTracking(audio) {
+                if (!this.contentDiv || !this.contentDiv._totalChars) return;
+
+                const chunkRange = this.chunkCharRanges[this.currentChunkIndex];
+                if (!chunkRange) return;
+
+                audio.ontimeupdate = () => {
+                    if (this.isDestroyed || !audio.duration) return;
+
+                    // Calculate position within this chunk
+                    const chunkProgress = audio.currentTime / audio.duration;
+                    const chunkCharLength = chunkRange.end - chunkRange.start;
+                    const charPosInChunk = Math.floor(chunkProgress * chunkCharLength);
+                    const globalCharPos = chunkRange.start + charPosInChunk;
+
+                    const segmentIndex = findSegmentByCharPosition(this.contentDiv, globalCharPos);
+                    if (segmentIndex !== this.lastSegmentIndex) {
+                        this.lastSegmentIndex = segmentIndex;
+                        highlightSegment(this.contentDiv, segmentIndex);
+                    }
+                };
             }
 
             async playFirstChunk() {
@@ -3370,6 +3583,9 @@
                 // Set up event handlers
                 audio.onended = () => this.onChunkEnded();
                 audio.onerror = () => this.onAudioError();
+
+                // Set up text tracking
+                this.setupTextTracking(audio);
 
                 await audio.play();
                 this.isPlaying = true;
@@ -3415,6 +3631,9 @@
                     audio.onended = () => this.onChunkEnded();
                     audio.onerror = () => this.onAudioError();
 
+                    // Set up text tracking for this chunk
+                    this.setupTextTracking(audio);
+
                     await audio.play();
                 } else {
                     // Chunk not ready yet, wait and retry
@@ -3449,6 +3668,8 @@
                 this.isPlaying = false;
                 this.isPaused = false;
                 this.isDestroyed = true;
+                // Clear text tracking highlights
+                clearTextTracking(this.contentDiv);
                 console.log(`%c⏹ Audio stopped`, 'color: #f44336');
             }
 
@@ -3459,6 +3680,8 @@
 
             onAllChunksFinished() {
                 console.log(`%c🎵 Playback complete (${this.streamingResult.totalChunks} chunks)`, 'font-weight: bold; color: #4CAF50', `(total: ${this.totalPlayTime.toFixed(1)}s)`);
+                // Clear text tracking highlights
+                clearTextTracking(this.contentDiv);
                 resetButton(this.button);
                 this.isDestroyed = true;
                 updateFloatingMarkState();
@@ -3470,6 +3693,10 @@
             const allListenButtons = document.querySelectorAll('.listen-btn');
             allListenButtons.forEach(button => {
                 if (button !== currentButton && button.speechState && (button.speechState.isPlaying || button.speechState.isPaused)) {
+                    // Clear text tracking for this button's content
+                    if (button.speechState.contentDiv) {
+                        clearTextTracking(button.speechState.contentDiv);
+                    }
                     // Stop streaming audio if present
                     if (button.speechState.audioQueueManager) {
                         button.speechState.audioQueueManager.stop();
@@ -3486,6 +3713,11 @@
 
         function resetButton(button) {
             if (button.speechState) {
+                // Clear text tracking highlights
+                if (button.speechState.contentDiv) {
+                    clearTextTracking(button.speechState.contentDiv);
+                    button.speechState.contentDiv = null;
+                }
                 // Clean up streaming audio if present
                 if (button.speechState.audioQueueManager) {
                     button.speechState.audioQueueManager.stop();
