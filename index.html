@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learner - Project Index</title>
+    <link rel="icon" type="image/png" href="https://i.imgur.com/JZpQ5mO.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6a78f8 0%, #5a67d8 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .page-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .page-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .page-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: #6a78f8;
+        }
+
+        .page-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #6a78f8;
+            margin-bottom: 8px;
+        }
+
+        .page-description {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .page-filename {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 10px;
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .stats {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .page-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Learner Project</h1>
+            <p>Collection of learning and productivity tools</p>
+        </div>
+
+        <div class="content">
+            <h2>Available Pages</h2>
+
+            <div class="page-grid">
+                <a href="learner.html" class="page-card">
+                    <div class="page-title">📚 Learner</div>
+                    <div class="page-description">
+                        Main learning application with blog post reading, text-to-speech functionality, and reading time estimation. Features Google Cloud TTS integration with streaming audio support.
+                    </div>
+                    <div class="page-filename">learner.html</div>
+                </a>
+
+                <a href="category-naming.html" class="page-card">
+                    <div class="page-title">🏷️ Category Naming</div>
+                    <div class="page-description">
+                        Tool for organizing and naming categories. Helps with content classification and organization tasks.
+                    </div>
+                    <div class="page-filename">category-naming.html</div>
+                </a>
+
+                <a href="markdown-to-image.html" class="page-card">
+                    <div class="page-title">🖼️ Markdown to Image</div>
+                    <div class="page-description">
+                        Convert markdown content to images. Useful for creating visual representations of text content and documentation.
+                    </div>
+                    <div class="page-filename">markdown-to-image.html</div>
+                </a>
+
+                <a href="reading-buddy.html" class="page-card">
+                    <div class="page-title">👥 Reading Buddy</div>
+                    <div class="page-description">
+                        Reading companion tool to enhance your reading experience. Provides assistance and features for better comprehension.
+                    </div>
+                    <div class="page-filename">reading-buddy.html</div>
+                </a>
+            </div>
+
+            <div class="stats">
+                <strong>4 tools available</strong> • Last updated: <span id="last-updated"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set last updated date
+        document.getElementById('last-updated').textContent = new Date().toLocaleDateString();
+
+        // Add some interactivity
+        document.querySelectorAll('.page-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.borderColor = '#6a78f8';
+            });
+
+            card.addEventListener('mouseleave', function() {
+                this.style.borderColor = '#e9ecef';
+            });
+        });
+    </script>
+</body>
+</html>

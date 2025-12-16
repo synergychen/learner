@@ -1,0 +1,4812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learner</title>
+    <link rel="icon" type="image/png" href="https://i.imgur.com/nXRkDYO.png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/nXRkDYO.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Learner">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --font-scale: 1;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            font-size: calc(16px * var(--font-scale));
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header p {
+            font-size: calc(1.1rem * var(--font-scale));
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: calc(1.1rem * var(--font-scale));
+            color: #666;
+        }
+
+        .error {
+            background-color: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .blog-post {
+            background: white;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        body.dark-mode .blog-post {
+            background: #1a1a1a;
+            border: 1px solid #444;
+        }
+
+        .blog-post:hover:not(.read) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 25px rgba(0,0,0,0.12);
+        }
+
+        .blog-post.read {
+            opacity: 0.5;
+        }
+
+        .blog-post.collapsed .post-content {
+            display: none;
+        }
+
+        .blog-post.collapsed .post-date {
+            display: none;
+        }
+
+        .blog-post.collapsed .mark-read-btn {
+            margin-top: 0;
+        }
+
+        .mark-read-btn-bottom {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: calc(0.9rem * var(--font-scale));
+            cursor: pointer;
+            margin-top: 20px;
+            opacity: 0.8;
+            transition: background-color 0.2s ease;
+            display: block;
+            margin-left: auto;
+        }
+
+        .mark-read-btn-bottom:hover { background: #071df5; }
+        .mark-read-btn-bottom.read { background: #28a745; }
+        .mark-read-btn-bottom.read:hover { background: #218838; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            background-color: #f8f9fa;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: #071df5;
+            padding: 15px 20px;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.8);
+            width: 0%;
+            transition: width 0.1s ease-out;
+        }
+
+        .header-title {
+            font-size: calc(1.2rem * var(--font-scale));
+            font-weight: 100;
+            color: white;
+            margin: 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .header-menu {
+            background: transparent;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-menu svg { stroke-width: 1.5; }
+        .header-menu:hover { background: rgba(255, 255, 255, 0.1); }
+
+        /* Header audio control */
+        .header-audio-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .header-audio-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease;
+        }
+
+        .header-audio-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .header-audio-btn.playing {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Add top padding to body to account for fixed header */
+        body {
+            padding-top: 70px;
+        }
+
+        .post-header {
+            position: sticky;
+            top: 0;
+            z-index: 98;
+        }
+
+        .highlight {
+            background-color: #fff3cd;
+            border-radius: 2px;
+            padding: 1px 2px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .highlight:hover { background-color: #ffeaa7; }
+        .highlight-tooltip {
+            position: absolute; background: #333; color: white; padding: 8px 12px;
+            border-radius: 4px; font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            user-select: none;
+        }
+        .highlight-tooltip:hover { background: #071df5; }
+
+        .highlight-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .highlight-tooltip:hover::after {
+            border-color: #071df5 transparent transparent transparent;
+        }
+
+        .search-container {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: calc(0.9rem * var(--font-scale));
+            transition: border-color 0.2s ease;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #071df5;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .collapse-all-btn, .sync-btn {
+            background: #071df5; color: white; border: none; padding: 10px 12px;
+            border-radius: 4px; font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer; transition: background-color 0.2s ease;
+            white-space: nowrap; display: flex; align-items: center;
+            justify-content: center;
+        }
+        .collapse-all-btn { opacity: 0.8; }
+        .collapse-all-btn:hover, .sync-btn:hover { background: #071df5; }
+
+        /* Hamburger Menu Sidebar */
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .menu-overlay.active { opacity: 1; visibility: visible; }
+        .menu-sidebar {
+            position: fixed; top: 0; left: -300px; width: 300px; height: 100%;
+            background: white; z-index: 1001; transition: left 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1); padding: 20px;
+        }
+        .menu-sidebar.active { left: 0; }
+
+        .menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .menu-title {
+            font-size: calc(1.2rem * var(--font-scale));
+            font-weight: 100;
+            color: #333;
+        }
+
+        .menu-close {
+            background: none;
+            border: none;
+            font-size: calc(1.5rem * var(--font-scale));
+            cursor: pointer;
+            color: #666;
+            padding: 5px;
+        }
+
+        .menu-close:hover {
+            color: #333;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+
+        .menu-item:hover {
+            background: #f8f9fa;
+            margin: 0 -20px;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .menu-item-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: calc(0.9rem * var(--font-scale));
+            color: #333;
+        }
+
+        .theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .theme-toggle.dark {
+            background: #071df5;
+        }
+
+        .theme-toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle.dark .theme-toggle-slider {
+            transform: translateX(26px);
+        }
+
+        /* Font size controls */
+        .font-size-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .font-size-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            min-width: 28px;
+            opacity: 0.8;
+        }
+
+        .font-size-btn:hover { background: #071df5; opacity: 1; }
+        .font-size-display {
+            font-size: calc(0.9rem * var(--font-scale)); color: #666;
+            min-width: 40px; text-align: center;
+        }
+        body.dark-mode .font-size-display { color: #999; }
+
+        .playback-speed-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .playback-speed-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            min-width: 28px;
+            opacity: 0.8;
+        }
+
+        .playback-speed-btn:hover { background: #071df5; opacity: 1; }
+        .playback-speed-display {
+            font-size: calc(0.9rem * var(--font-scale)); color: #666;
+            min-width: 40px; text-align: center;
+        }
+        body.dark-mode .playback-speed-display { color: #999; }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .container {
+            background: #1a1a1a;
+        }
+
+        body.dark-mode .controls {
+            background: #1e1e1e;
+        }
+
+        body.dark-mode .search-bar {
+            background: #1A1A1A;
+            border: 1px solid #555;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .search-bar::placeholder { color: #999; }
+        body.dark-mode .post-header { border-bottom: 1px solid #444; }
+        body.dark-mode .post-header:hover { background: #1A1A1A; }
+        body.dark-mode .post-title a { color: #6a78f8; }
+        body.dark-mode .post-date { color: #999; }
+        body.dark-mode .post-content { color: #e0e0e0; }
+
+        body.dark-mode .post-content h1,
+        body.dark-mode .post-content h2,
+        body.dark-mode .post-content h3,
+        body.dark-mode .post-content h4,
+        body.dark-mode .post-content h5,
+        body.dark-mode .post-content h6 {
+            color: #6a78f8;
+            font-weight: 300;
+        }
+
+        body.dark-mode .post-content h1 { font-size: calc(1.4rem * var(--font-scale)); }
+        body.dark-mode .post-content h2 { font-size: calc(1.2rem * var(--font-scale)); }
+        body.dark-mode .post-content h3, body.dark-mode .post-content h4,
+        body.dark-mode .post-content h5, body.dark-mode .post-content h6 { font-size: calc(1.0rem * var(--font-scale)); }
+
+        body.dark-mode .post-content table {
+            border: 0.1px solid #2f2f2f;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        body.dark-mode .post-content table th,
+        body.dark-mode .post-content table td {
+            border: 0.1px solid #2f2f2f;
+            background: transparent;
+        }
+
+        body.dark-mode .post-content table th {
+            font-weight: 100;
+        }
+
+        body.dark-mode .post-content th:first-child,
+        body.dark-mode .post-content td:first-child {
+            min-width: 75px;
+        }
+
+        body.dark-mode .post-content p {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .post-content ul li::before {
+            border-right-color: #6a78f8;
+            border-bottom-color: #6a78f8;
+            opacity: 0.5;
+        }
+
+        body.dark-mode .menu-sidebar {
+            background: #2d2d2d;
+        }
+
+        body.dark-mode .menu-title {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .menu-close {
+            color: #999;
+        }
+
+        .mark-read-btn-bottom:hover {
+            background: #e0e0e0;
+        }
+
+        body.dark-mode .mark-read-btn-bottom:hover {
+            background: #555;
+        }
+
+        body.dark-mode .menu-close:hover {
+            color: #e0e0e0;
+        }
+
+        /* YouTube embed styling with 16:9 aspect ratio */
+        .youtube-embed-container {
+            margin: 10px 0 5px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio (9/16 = 0.5625) */
+        }
+
+        body.dark-mode .youtube-embed-container {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        /* Text tracking highlight for audio playback */
+        .speech-tracking-segment {
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 4px;
+            padding: 2px 0;
+        }
+
+        .speech-tracking-segment.current-speech {
+            background-color: rgba(106, 120, 248, 0.15);
+            box-shadow: -4px 0 0 rgba(106, 120, 248, 0.5);
+        }
+
+        body.dark-mode .speech-tracking-segment.current-speech {
+            background-color: rgba(106, 120, 248, 0.25);
+            box-shadow: -4px 0 0 rgba(106, 120, 248, 0.7);
+        }
+
+        .youtube-embed-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        /* YouTube fallback styling */
+        .youtube-fallback {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .youtube-thumbnail-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        .youtube-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.8;
+        }
+
+        .youtube-play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0.9;
+        }
+
+        .youtube-fallback-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 18px;
+            background: rgba(0,0,0,0.3);
+            transition: background 0.3s ease;
+        }
+
+        .youtube-fallback-link:hover {
+            background: rgba(0,0,0,0.5);
+            color: white;
+            text-decoration: none;
+        }
+
+        body.dark-mode .menu-item-label {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .menu-header {
+            border-bottom: 1px solid #444;
+        }
+
+        body.dark-mode .menu-item {
+            border-bottom: 1px solid #444;
+        }
+
+        body.dark-mode .menu-item:hover {
+            background: #3d3d3d;
+        }
+
+        /* API Key Modal Styles */
+        .api-key-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .api-key-modal.show {
+            display: flex;
+        }
+
+        .api-key-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        body.dark-mode .api-key-modal-content {
+            background: #2d2d2d;
+            color: #e0e0e0;
+        }
+
+        .api-key-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        body.dark-mode .api-key-modal-header {
+            border-bottom: 1px solid #444;
+        }
+
+        .api-key-modal-title {
+            font-size: calc(1.2rem * var(--font-scale));
+            font-weight: 100;
+            color: #333;
+        }
+
+        body.dark-mode .api-key-modal-title {
+            color: #e0e0e0;
+        }
+
+        .api-key-modal-close {
+            background: none;
+            border: none;
+            font-size: calc(1.5rem * var(--font-scale));
+            cursor: pointer;
+            color: #666;
+            padding: 5px;
+        }
+
+        body.dark-mode .api-key-modal-close {
+            color: #999;
+        }
+
+        .api-key-modal-close:hover {
+            color: #333;
+        }
+
+        body.dark-mode .api-key-modal-close:hover {
+            color: #e0e0e0;
+        }
+
+        .api-key-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: calc(0.9rem * var(--font-scale));
+            transition: border-color 0.2s ease;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        body.dark-mode .api-key-input {
+            background: #1a1a1a;
+            border: 1px solid #555;
+            color: #e0e0e0;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: #0d47a1;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 0;
+            cursor: pointer;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            height: 42px;
+            width: 42px;
+            flex-shrink: 0;
+        }
+
+        body.dark-mode .copy-btn {
+            border-color: #555;
+            color: #aaa;
+        }
+
+        .copy-btn:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        body.dark-mode .copy-btn:hover {
+            background: #2a2a2a;
+            color: #fff;
+        }
+
+        .api-key-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .api-key-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: calc(0.9rem * var(--font-scale));
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .api-key-btn:hover {
+            background: #071df5;
+        }
+
+        .api-key-btn.secondary {
+            background: #6c757d;
+        }
+
+        .api-key-btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .api-key-help {
+            font-size: calc(0.8rem * var(--font-scale));
+            color: #666;
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+
+        body.dark-mode .api-key-help {
+            color: #999;
+        }
+
+        .api-key-help a {
+            color: #071df5;
+            text-decoration: none;
+        }
+
+        .api-key-help a:hover {
+            text-decoration: underline;
+        }
+
+        /* API Key Status Indicator */
+        .api-key-status {
+            opacity: 0;
+            color: #28a745;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .api-key-status.configured {
+            opacity: 1;
+        }
+
+        body.dark-mode .api-key-status {
+            color: #28a745;
+        }
+
+        .listen-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+        }
+
+        .listen-btn:hover {
+            background: #071df5;
+        }
+
+        .listen-btn.playing {
+            background: #071df5;
+        }
+
+        .listen-btn.playing:hover {
+            background: #071df5;
+        }
+
+        .listen-btn.loading {
+            background: #071df5;
+            opacity: 0.8;
+        }
+
+        .listen-btn.loading:hover {
+            background: #071df5;
+        }
+
+        .listen-btn.paused {
+            background: #071df5;
+            opacity: 0.7;
+        }
+
+        .listen-btn.paused:hover {
+            background: #071df5;
+        }
+
+        .post-header {
+            padding: 25px 30px 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            position: relative;
+        }
+
+        .post-header:hover {
+            background-color: #f8f9fa;
+        }
+
+        body.dark-mode .post-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-mode .post-header:hover {
+            background-color: #1a1a1a;
+        }
+
+
+        .post-title {
+            font-size: calc(1.8rem * var(--font-scale));
+            font-weight: 300;
+            margin-bottom: 10px;
+            color: #6a78f8;
+            line-height: 1.3;
+        }
+
+        .post-title-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .blog-post.note-post .post-title {
+            margin-bottom: 0;
+        }
+
+        .floating-nav {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 80px;
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            background: transparent;
+            padding: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease, bottom 0.3s ease;
+            z-index: 900;
+        }
+
+        .floating-nav.visible {
+            opacity: 0.7;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .floating-nav.visible.scrolling {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .floating-nav.tabs-visible {
+            bottom: 80px;
+        }
+
+        .floating-nav button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #384af5;
+            background: rgba(20, 25, 45, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #384af5;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .floating-nav button:hover {
+            background: rgba(30, 40, 70, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .floating-nav button svg {
+            width: 34px;
+            height: 34px;
+            pointer-events: none;
+            stroke: currentColor;
+        }
+
+        .floating-nav button.mark-action {
+            background: #384af5;
+            color: #ffffff;
+            border-color: #384af5;
+        }
+
+        .floating-nav button.mark-action:hover {
+            background: #2a3cd4;
+            border-color: #2a3cd4;
+        }
+
+
+
+        .note-star-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #f0c419;
+            opacity: 0.8;
+        }
+
+        .note-star-btn:hover {
+            opacity: 1;
+        }
+
+        .note-star-btn svg {
+            width: 18px;
+            height: 18px;
+            pointer-events: none;
+        }
+
+        .post-title a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            color: #6a78f8;
+        }
+
+        .post-title a:hover {
+            color: #6a78f8;
+        }
+
+        .post-date {
+            color: #666;
+            font-size: calc(0.9rem * var(--font-scale));
+            font-weight: 100;
+            white-space: pre-line;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mark-read-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: calc(0.8rem * var(--font-scale));
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s ease;
+        }
+
+        .mark-read-btn:hover {
+            background: #071df5;
+        }
+
+        .mark-read-btn.read {
+            background: #28a745;
+        }
+
+        .mark-read-btn.read:hover {
+            background: #218838;
+        }
+
+        .sync-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: calc(0.9rem * var(--font-scale));
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .sync-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .post-content {
+            padding: 25px 30px 30px;
+        }
+
+        .post-content h1,
+        .post-content h2,
+        .post-content h3,
+        .post-content h4,
+        .post-content h5,
+        .post-content h6 {
+            margin: 15px 0 10px;
+            color: #6a78f8;
+            font-weight: 300;
+        }
+
+        .post-content h1 { font-size: calc(1.4rem * var(--font-scale)); color: #6a78f8; }
+        .post-content h2 { font-size: calc(1.2rem * var(--font-scale)); color: #6a78f8; }
+        .post-content h3, .post-content h4, .post-content h5, .post-content h6 {
+            font-size: calc(1.0rem * var(--font-scale)); color: #6a78f8;
+        }
+
+        .post-content p {
+            margin-bottom: 15px;
+            color: #444;
+        }
+
+        .post-content ul,
+        .post-content ol {
+            margin: 15px 0;
+            padding-left: 1px;
+        }
+
+        .post-content ul {
+            list-style: none;
+        }
+
+        .post-content ul li {
+            position: relative;
+            margin-bottom: 8px;
+            padding-left: 20px;
+        }
+
+        .post-content ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.6em;
+            width: 6px;
+            height: 6px;
+            border-right: 1.5px solid #6a78f8;
+            border-bottom: 1.5px solid #6a78f8;
+            transform: rotate(-45deg);
+        }
+
+        .post-content ol li {
+            margin-bottom: 8px;
+        }
+
+        .post-content ol {
+            margin-left: 15px;
+        }
+
+        .post-content ol li::marker {
+            color: #6a78f8;
+        }
+
+        .post-content blockquote {
+            border-left: 4px solid #071df5;
+            margin: 20px 0;
+            padding: 15px 20px;
+            background: #f8f9ff;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .post-content hr {
+            border: none;
+            border-top: 1px solid #555;
+            margin: 10px 0;
+            padding-bottom: 5px;
+        }
+
+        .post-content code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: calc(0.9em * var(--font-scale));
+        }
+
+        .post-content pre {
+            background: #f8f8f8;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .post-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .post-content table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 5px 0 20px 0;
+        }
+
+        .post-content th,
+        .post-content td {
+            border: 0.1px solid #2f2f2f;
+            padding: 8px 12px;
+            text-align: left;
+            background: white;
+            color: #999;
+        }
+
+        .post-content th:first-child,
+        .post-content td:first-child {
+            min-width: 75px;
+        }
+
+        .post-content th {
+            font-weight: 100;
+        }
+
+        .post-content a {
+            color: #071df5;
+            text-decoration: none;
+        }
+
+        .post-content a:hover {
+            text-decoration: underline;
+        }
+
+        /* Ensure all elements use font-weight 100 */
+        body, html, strong, b, th, dt, .post-content strong, .post-content b,
+        .post-content th, .post-content dt { font-weight: 100; }
+
+        .no-posts {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+            font-size: calc(1.1rem * var(--font-scale));
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            header h1 {
+                font-size: calc(2rem * var(--font-scale));
+            }
+
+            .post-header,
+            .post-content {
+                padding: 20px;
+            }
+
+            .post-title {
+                font-size: calc(1.2rem * var(--font-scale));
+                font-weight: 300;
+            }
+        }
+
+        /* Bottom Tab Navigation */
+        .bottom-tabs {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #2a2a2a;
+            border-top: 1px solid #444;
+            display: flex;
+            z-index: 1000;
+            padding: 0;
+            margin: 0;
+            transform: translateY(0);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .bottom-tabs.hidden {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 8px;
+            background: none;
+            border: none;
+            color: #999;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            min-height: 60px;
+        }
+
+        .tab-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+
+        .tab-item.active {
+            color: #6a78f8;
+            background: #000;
+            position: relative;
+        }
+
+        .tab-item.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #6a78f8;
+            border-radius: 0 0 2px 2px;
+        }
+
+        .tab-icon {
+            width: 20px;
+            height: 20px;
+            margin-bottom: 4px;
+            stroke: currentColor;
+            fill: none;
+        }
+
+        .tab-label {
+            font-size: 11px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        /* Add bottom padding to main content to account for tabs */
+        .container {
+            padding-bottom: 80px;
+        }
+
+        /* Dark mode styles for tabs */
+        body.dark-mode .bottom-tabs {
+            background: #1a1a1a;
+            border-top-color: #333;
+        }
+
+        body.dark-mode .tab-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        body.dark-mode .tab-item.active {
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Header -->
+    <div class="header">
+        <h1 class="header-title" id="header-title">Learner</h1>
+        <!-- Header Audio Control - shown when audio is playing -->
+        <div class="header-audio-control" id="header-audio-control">
+            <button class="header-audio-btn" id="header-audio-btn" title="Pause/Play audio">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                    <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                </svg>
+            </button>
+        </div>
+        <div class="header-progress" id="header-progress"></div>
+        <button class="header-menu" id="header-menu" title="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <div class="search-container">
+                <input type="text" class="search-bar" id="search-bar" placeholder="Search posts...">
+            </div>
+            <button class="collapse-all-btn" id="collapse-all-btn" title="Collapse All">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 15L12 9L6 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Hamburger Menu -->
+        <div class="menu-overlay" id="menu-overlay"></div>
+        <div class="menu-sidebar" id="menu-sidebar">
+            <div class="menu-header">
+                <div class="menu-title">Settings</div>
+                <button class="menu-close" id="menu-close">&times;</button>
+            </div>
+            <div class="menu-item" id="theme-toggle-item">
+                <div class="menu-item-label">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Dark Mode
+                </div>
+                <div class="theme-toggle" id="theme-toggle">
+                    <div class="theme-toggle-slider"></div>
+                </div>
+            </div>
+            <div class="menu-item" id="font-size-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 7V4h16v3M9 20h6M12 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Font Size
+                </div>
+                <div class="font-size-controls">
+                    <button class="font-size-btn" id="font-size-decrease">A-</button>
+                    <span class="font-size-display" id="font-size-display">100%</span>
+                    <button class="font-size-btn" id="font-size-increase">A+</button>
+                </div>
+            </div>
+            <div class="menu-item" id="playback-speed-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M19 12h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Playback Speed
+                </div>
+                <div class="playback-speed-controls">
+                    <button class="playback-speed-btn" id="playback-speed-decrease">-</button>
+                    <span class="playback-speed-display" id="playback-speed-display">1.0x</span>
+                    <button class="playback-speed-btn" id="playback-speed-increase">+</button>
+                </div>
+            </div>
+            <div class="menu-item" id="auto-mark-read-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Auto Mark Read
+                </div>
+                <div class="theme-toggle" id="auto-mark-read-toggle">
+                    <div class="theme-toggle-slider"></div>
+                </div>
+            </div>
+            <div class="menu-item" id="continuous-play-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 3l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 11V9a4 4 0 014-4h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 21l-4-4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 13v2a4 4 0 01-4 4H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Continuous Play
+                </div>
+                <div class="theme-toggle" id="continuous-play-toggle">
+                    <div class="theme-toggle-slider"></div>
+                </div>
+            </div>
+            <div class="menu-item" id="sync-menu-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M23 20V14H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M3.51 15A9 9 0 0 0 18.36 18.36L23 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Sync
+                </div>
+            </div>
+            <div class="menu-item" id="api-key-menu-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 2L19 4L15 8L22 15L21 16L14 9L10 13L8 11L12 7L16 3L18 1L21 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 7L2 21L1 20L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    TTS API Key
+                </div>
+                <div class="api-key-status" id="api-key-status">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="menu-item" id="webhook-menu-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Webhook Config
+                </div>
+                <div class="api-key-status" id="webhook-status">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="menu-item" id="datasource-menu-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="10 9 9 9 8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Data Source
+                </div>
+                <div class="api-key-status" id="datasource-status">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Key Configuration Modal -->
+        <div class="api-key-modal" id="api-key-modal">
+            <div class="api-key-modal-content">
+                <div class="api-key-modal-header">
+                    <div class="api-key-modal-title">Configure Google Cloud TTS API Key</div>
+                    <button class="api-key-modal-close" id="api-key-modal-close">&times;</button>
+                </div>
+                <div class="api-key-help">
+                    To use text-to-speech functionality, you need a Google Cloud Text-to-Speech API key:
+                    <br><br>
+                    1. Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>
+                    <br>2. Create a project and enable Text-to-Speech API
+                    <br>3. Create credentials (API Key)
+                    <br>4. Paste your API key below
+                </div>
+                <form class="api-key-form" id="api-key-form">
+                    <div class="input-group">
+                        <input type="text" class="api-key-input" id="api-key-input" placeholder="Enter your Google Cloud TTS API key" autocomplete="off">
+                        <button type="button" class="copy-btn" onclick="copyToClipboard('api-key-input')" title="Copy API Key">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="api-key-buttons">
+                        <button type="button" class="api-key-btn secondary" id="api-key-cancel">Cancel</button>
+                        <button type="submit" class="api-key-btn" id="api-key-save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Webhook Configuration Modal -->
+        <div class="api-key-modal" id="webhook-modal">
+            <div class="api-key-modal-content">
+                <div class="api-key-modal-header">
+                    <div class="api-key-modal-title">Configure Webhook Base URL</div>
+                    <button class="api-key-modal-close" id="webhook-modal-close">&times;</button>
+                </div>
+                <div class="api-key-help">
+                    Enter the base URL for your n8n webhooks. This acts as the prefix for all webhook calls.
+                    <br><br>
+                    Example: <code>https://n8n.your-domain.com/webhook/</code>
+                </div>
+                <form class="api-key-form" id="webhook-form">
+                    <div class="input-group">
+                        <input type="url" class="api-key-input" id="webhook-input" placeholder="https://n8n.example.com/webhook/" autocomplete="off">
+                        <button type="button" class="copy-btn" onclick="copyToClipboard('webhook-input')" title="Copy URL">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="api-key-buttons">
+                        <button type="button" class="api-key-btn secondary" id="webhook-cancel">Cancel</button>
+                        <button type="submit" class="api-key-btn" id="webhook-save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Data Source Configuration Modal -->
+        <div class="api-key-modal" id="datasource-modal">
+            <div class="api-key-modal-content">
+                <div class="api-key-modal-header">
+                    <div class="api-key-modal-title">Configure Data Source</div>
+                    <button class="api-key-modal-close" id="datasource-modal-close">&times;</button>
+                </div>
+                <div class="api-key-help">
+                    Configure your Google Sheets data source.
+                    <br><br>
+                    1. <strong>Sheet ID:</strong> The long string in your Google Sheet URL.<br>
+                    2. <strong>Videos GID:</strong> The 'gid' parameter for the Videos tab.<br>
+                    3. <strong>Notes GID:</strong> The 'gid' parameter for the Notes tab.
+                </div>
+                <form class="api-key-form" id="datasource-form">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Google Sheet ID</label>
+                        <div class="input-group">
+                            <input type="text" class="api-key-input" id="sheet-id-input" placeholder="1a0SeElr..." required>
+                            <button type="button" class="copy-btn" onclick="copyToClipboard('sheet-id-input')" title="Copy Sheet ID">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Videos Sheet GID</label>
+                        <div class="input-group">
+                            <input type="text" class="api-key-input" id="videos-gid-input" placeholder="0" required>
+                            <button type="button" class="copy-btn" onclick="copyToClipboard('videos-gid-input')" title="Copy Videos GID">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Notes Sheet GID</label>
+                        <div class="input-group">
+                            <input type="text" class="api-key-input" id="notes-gid-input" placeholder="0" required>
+                            <button type="button" class="copy-btn" onclick="copyToClipboard('notes-gid-input')" title="Copy Notes GID">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="api-key-buttons">
+                        <button type="button" class="api-key-btn secondary" id="datasource-cancel">Cancel</button>
+                        <button type="submit" class="api-key-btn" id="datasource-save">Save & Reload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="loading" class="loading">
+                Loading posts...
+            </div>
+
+            <div id="error" class="error" style="display: none;">
+                Failed to load posts. Please try again later.
+            </div>
+
+            <!-- Videos Content (Default) -->
+            <div id="videos-container" class="tab-content">
+            </div>
+
+            <!-- Notes Content -->
+            <div id="notes-container" class="tab-content" style="display: none;">
+            </div>
+
+            <div id="no-posts" class="no-posts" style="display: none;">
+                No posts with summaries found.
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-nav" id="floating-nav">
+        <button id="floating-prev" aria-label="Previous article">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="15 18 9 12 15 6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+        <button id="floating-mark" class="mark-action" aria-label="Mark as read">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 13l4 4L19 7" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+        <button id="floating-next" aria-label="Next article">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="9 18 15 12 9 6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+    </div>
+
+
+    <script>
+        // Load configuration from localStorage
+        const SHEET_ID = localStorage.getItem('learner_sheet_id') || '';
+        const VIDEOS_GID = localStorage.getItem('learner_videos_gid') || '';
+        const NOTES_GID = localStorage.getItem('learner_notes_gid') || '';
+
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq=&gid=${VIDEOS_GID}`;
+        const NOTES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq=&gid=${NOTES_GID}`;
+
+        // Data caching system
+        let cachedData = {
+            videos: null,
+            notes: null
+        };
+
+        let currentTab = 'videos'; // Default tab
+
+        // Global callback function for JSONP
+        window.googleSheetsCallback = function(data) {
+            window.sheetsData = data;
+        };
+
+        function formatDate(dateString, includeTime = false) {
+            if (!dateString) return 'No date';
+
+            try {
+                let year, month, day, hours = 0, minutes = 0;
+                let hasTime = false;
+
+                // Handle Google Sheets date format: "Date(2025,10,30,17,31,0)" or "Date(2025,10,17)"
+                if (typeof dateString === 'string' && dateString.startsWith('Date(')) {
+                    const match = dateString.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
+                    if (match) {
+                        year = parseInt(match[1]);
+                        month = parseInt(match[2]) + 1; // Google Sheets months are 0-indexed, so add 1
+                        day = parseInt(match[3]);
+
+                        if (match[4] !== undefined) {
+                            hours = parseInt(match[4]);
+                            minutes = parseInt(match[5]);
+                            hasTime = true;
+                        }
+                    }
+                }
+
+                if (year === undefined) {
+                    const date = new Date(dateString);
+                    if (isNaN(date.getTime())) return dateString;
+                    year = date.getFullYear();
+                    month = date.getMonth() + 1;
+                    day = date.getDate();
+                    hours = date.getHours();
+                    minutes = date.getMinutes();
+                    hasTime = true;
+                }
+
+                const formattedMonth = month.toString().padStart(2, '0');
+                const formattedDay = day.toString().padStart(2, '0');
+                const datePart = `${year}/${formattedMonth}/${formattedDay}`;
+
+                if (includeTime && hasTime) {
+                    const formattedHours = hours.toString().padStart(2, '0');
+                    const formattedMinutes = minutes.toString().padStart(2, '0');
+                    return `${datePart} ${formattedHours}:${formattedMinutes}`;
+                }
+
+                return datePart;
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        function createPostElement(post) {
+            const postDiv = document.createElement('div');
+            postDiv.className = 'blog-post';
+
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'post-header';
+
+            const titleElement = document.createElement('h1');
+            titleElement.className = 'post-title';
+            const isNote = post.tabType === 'notes';
+
+            if (isNote) {
+                titleElement.textContent = formatDate(post.addedAt, true) || 'No date';
+            } else if (post.videoUrl && post.videoUrl.trim()) {
+                const titleLink = document.createElement('a');
+                titleLink.href = post.videoUrl;
+                titleLink.target = '_blank';
+                titleLink.rel = 'noopener noreferrer';
+                titleLink.textContent = post.title || 'Untitled';
+                titleElement.appendChild(titleLink);
+            } else {
+                titleElement.textContent = post.title || 'Untitled';
+            }
+
+            const titleContainer = document.createElement('div');
+            titleContainer.className = 'post-title-container';
+            titleContainer.appendChild(titleElement);
+
+            let listenBtn = null;
+            let dateElement = null;
+            if (!isNote) {
+                dateElement = document.createElement('div');
+                dateElement.className = 'post-date';
+
+                let dateText = `Added: ${formatDate(post.addedAt)}`;
+                if (post.publishedAt) {
+                    dateText += `\nPublished: ${formatDate(post.publishedAt)}`;
+                }
+
+                const readingTime = calculateReadingTime(post.summary || '');
+                dateText += `\n${readingTime}`;
+
+                dateElement.textContent = dateText;
+            }
+
+            // Initialize post state based on post.isRead or post.isArchived
+            if (isNote) {
+                postDiv.classList.add('note-post');
+            }
+
+            if (post.isRead || post.isArchived) {
+                postDiv.classList.add('read');
+                // Read/archived posts start collapsed
+                postDiv.classList.add('collapsed');
+            }
+
+            // Create bottom mark read button
+            const markReadBtnBottom = document.createElement('button');
+            markReadBtnBottom.className = 'mark-read-btn-bottom';
+
+            // Initialize bottom button state - different for Videos vs Notes
+            if (post.isArchived !== undefined) {
+                // This is a Note - use Archive functionality
+                if (post.isArchived) {
+                    markReadBtnBottom.textContent = 'Unarchive';
+                    markReadBtnBottom.classList.add('read');
+                } else {
+                    markReadBtnBottom.textContent = 'Archive';
+                }
+
+                markReadBtnBottom.addEventListener('click', function() {
+                    toggleArchiveStatus(postDiv, markReadBtnBottom, post);
+                });
+            } else {
+                // This is a Video - use Read functionality
+                if (post.isRead) {
+                    markReadBtnBottom.textContent = 'Mark as unread';
+                    markReadBtnBottom.classList.add('read');
+                } else {
+                    markReadBtnBottom.textContent = 'Mark as read';
+                }
+
+                markReadBtnBottom.addEventListener('click', function() {
+                    toggleReadStatus(postDiv, markReadBtnBottom, post.videoUrl);
+                });
+            }
+
+            // Add click handler to header for collapse/expand
+            headerDiv.addEventListener('click', function(e) {
+                // Don't trigger if clicking on buttons
+                if (e.target === markReadBtnBottom) {
+                    return;
+                }
+                if (listenBtn && (e.target === listenBtn || e.target.closest('.listen-btn'))) {
+                    return;
+                }
+                toggleCollapse(postDiv);
+            });
+
+            if (isNote && post.noteId) {
+                const starButton = document.createElement('button');
+                starButton.className = 'note-star-btn';
+                starButton.type = 'button';
+                starButton.setAttribute('aria-label', post.isStarred ? 'Unstar note' : 'Star note');
+                updateStarButtonIcon(starButton, Boolean(post.isStarred));
+
+                starButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const nextState = !post.isStarred;
+                    updateStarButtonIcon(starButton, nextState);
+                    starButton.setAttribute('aria-label', nextState ? 'Unstar note' : 'Star note');
+                    starButton.disabled = true;
+
+                    callStarWebhook(post.noteId, nextState)
+                        .then(() => {
+                            post.isStarred = nextState;
+                            showSyncNotification('Synced');
+                        })
+                        .catch(error => {
+                            console.error('Star webhook call failed:', error);
+                            updateStarButtonIcon(starButton, post.isStarred);
+                            starButton.setAttribute('aria-label', post.isStarred ? 'Unstar note' : 'Star note');
+                            showSyncNotification('Failed');
+                        })
+                        .finally(() => {
+                            starButton.disabled = false;
+                        });
+                });
+
+                titleContainer.appendChild(starButton);
+            }
+
+            headerDiv.appendChild(titleContainer);
+
+            if (!isNote) {
+                listenBtn = document.createElement('button');
+                listenBtn.className = 'listen-btn';
+                listenBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                `;
+
+                listenBtn.postData = post;
+                listenBtn.speechState = {
+                    audio: null,
+                    isPlaying: false,
+                    isPaused: false
+                };
+
+                listenBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleSpeech(listenBtn);
+                });
+
+                dateElement.appendChild(listenBtn);
+                headerDiv.appendChild(dateElement);
+            }
+
+            // Add YouTube embed to header if video URL exists
+            if (post.videoUrl && post.videoUrl.trim()) {
+                const youtubeEmbed = createYouTubeEmbed(post.videoUrl);
+                if (youtubeEmbed) {
+                    headerDiv.appendChild(youtubeEmbed);
+                }
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'post-content';
+
+            try {
+                // Parse markdown to HTML
+                let htmlContent = marked.parse(post.summary || '');
+
+                // Remove the first H1 title from content (it's already in the header)
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlContent;
+                const firstH1 = tempDiv.querySelector('h1');
+                if (firstH1) {
+                    firstH1.remove();
+                }
+                contentDiv.innerHTML = tempDiv.innerHTML;
+            } catch (e) {
+                console.error('Error parsing markdown:', e);
+                // Fallback to plain text with line breaks
+                contentDiv.innerHTML = (post.summary || '').replace(/\n/g, '<br>');
+            }
+
+            // Add bottom button to content
+            contentDiv.appendChild(markReadBtnBottom);
+
+            postDiv.appendChild(headerDiv);
+            postDiv.appendChild(contentDiv);
+
+            return postDiv;
+        }
+
+        function loadDataWithJSONP(url) {
+            return new Promise((resolve, reject) => {
+                // Create a global callback function that Google Sheets will call
+                window.google = window.google || {};
+                window.google.visualization = window.google.visualization || {};
+                window.google.visualization.Query = window.google.visualization.Query || {};
+                window.google.visualization.Query.setResponse = function(response) {
+                    resolve(response);
+                };
+
+                const script = document.createElement('script');
+                script.src = url;
+                script.onerror = () => {
+                    document.head.removeChild(script);
+                    reject(new Error('Failed to load data'));
+                };
+
+                script.onload = () => {
+                    document.head.removeChild(script);
+                };
+
+                document.head.appendChild(script);
+            });
+        }
+
+        async function loadTabData(tabType) {
+            // Check if configuration exists
+            if (!SHEET_ID) {
+                console.warn('Data Source not configured');
+                showOfflineNotification('Data Source not configured. Please check Settings.');
+                const loadingElement = document.getElementById('loading');
+                if (loadingElement) loadingElement.style.display = 'none';
+                return { table: { rows: [] } }; // Return empty structure
+            }
+
+            // Return cached data if available
+            if (cachedData[tabType]) {
+                return cachedData[tabType];
+            }
+
+            // Determine URL based on tab type
+            const url = tabType === 'videos' ? SHEET_URL : NOTES_URL;
+
+            try {
+                const data = await loadDataWithJSONP(url);
+                // Cache the data
+                cachedData[tabType] = data;
+                return data;
+            } catch (error) {
+                throw new Error(`Failed to load ${tabType} data: ${error.message}`);
+            }
+        }
+
+        async function renderTabContent(tabType) {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const container = document.getElementById(`${tabType}-container`);
+            const noPostsElement = document.getElementById('no-posts');
+
+            // Show loading if container is empty
+            if (!container.children.length) {
+                loadingElement.style.display = 'block';
+                errorElement.style.display = 'none';
+            }
+
+            try {
+                const data = await loadTabData(tabType);
+                loadingElement.style.display = 'none';
+
+                // If container already has content (cached), don't re-render
+                if (container.children.length > 0) {
+                    return;
+                }
+
+                if (!data.table || !data.table.rows) {
+                    throw new Error('Invalid data structure');
+                }
+
+                const rows = data.table.rows;
+                const posts = [];
+
+                // Find column indices
+                const cols = data.table.cols;
+                const columnMap = {};
+                cols.forEach((col, index) => {
+                    if (col.label) {
+                        columnMap[col.label.toLowerCase()] = index;
+                    }
+                });
+
+                // Different column mappings for Videos vs Notes
+                let titleIndex, urlIndex, dateIndex, publishedIndex, summaryIndex, readIndex, archiveIndex, starIndex, idIndex;
+
+                if (tabType === 'videos') {
+                    titleIndex = columnMap['video title'] ?? -1;
+                    urlIndex = columnMap['video url'] ?? -1;
+                    dateIndex = columnMap['added at'] ?? -1;
+                    publishedIndex = columnMap['published at'] ?? -1;
+                    summaryIndex = columnMap['summary'] ?? -1;
+                    readIndex = columnMap['read'] ?? -1;
+                } else if (tabType === 'notes') {
+                    titleIndex = -1; // Notes don't have titles, we'll use first part of note content
+                    urlIndex = -1; // Notes don't have URLs
+                    dateIndex = columnMap['added at'] ?? -1;
+                    publishedIndex = -1; // Notes don't have published dates
+                    summaryIndex = columnMap['note'] ?? -1; // Main content is in 'note' column
+                    readIndex = -1; // Notes don't have read status
+                    archiveIndex = columnMap['archived'] ?? -1;
+                    starIndex = columnMap['star'] ?? -1;
+                    idIndex = columnMap['id'] ?? -1; // ID field for webhook functionality
+                }
+
+                // Process rows
+                rows.forEach(row => {
+                    if (!row.c) return;
+
+                    let title, videoUrl, addedAt, publishedAt, summary, isRead, isArchived, isStarred, noteId;
+
+                    if (tabType === 'videos') {
+                        title = titleIndex >= 0 && row.c[titleIndex] ? row.c[titleIndex].v : '';
+                        videoUrl = urlIndex >= 0 && row.c[urlIndex] ? row.c[urlIndex].v : '';
+                        addedAt = dateIndex >= 0 && row.c[dateIndex] ? row.c[dateIndex].v : '';
+                        publishedAt = publishedIndex >= 0 && row.c[publishedIndex] ? row.c[publishedIndex].v : '';
+                        summary = summaryIndex >= 0 && row.c[summaryIndex] ? row.c[summaryIndex].v : '';
+                        isRead = readIndex >= 0 && row.c[readIndex] ? (row.c[readIndex].v === 1 || row.c[readIndex].v === '1') : false;
+                    } else if (tabType === 'notes') {
+                        const noteContent = summaryIndex >= 0 && row.c[summaryIndex] ? row.c[summaryIndex].v : '';
+                        // Use first line or first 50 characters as title
+                        const lines = noteContent.split('\n');
+                        title = lines[0] ? (lines[0].length > 50 ? lines[0].substring(0, 50) + '...' : lines[0]) : 'Untitled Note';
+                        videoUrl = ''; // Notes don't have video URLs
+                        addedAt = dateIndex >= 0 && row.c[dateIndex] ? row.c[dateIndex].v : '';
+                        publishedAt = ''; // Notes don't have published dates
+                        summary = noteContent;
+                        isRead = false; // Notes don't have read status
+                        isArchived = archiveIndex >= 0 && row.c[archiveIndex] ? (row.c[archiveIndex].v === 1 || row.c[archiveIndex].v === '1') : false;
+                        isStarred = starIndex >= 0 && row.c[starIndex] ? (row.c[starIndex].v === 1 || row.c[starIndex].v === '1') : false;
+                        noteId = idIndex >= 0 && row.c[idIndex] ? row.c[idIndex].v : null;
+                    }
+
+                    // Only include posts with non-empty content
+                    if (summary && summary.trim()) {
+                        const post = {
+                            title: title,
+                            videoUrl: videoUrl,
+                            addedAt: addedAt,
+                            publishedAt: publishedAt,
+                            summary: summary.trim(),
+                            isRead: isRead,
+                            tabType: tabType
+                        };
+
+                        // Add notes-specific properties
+                        if (tabType === 'notes') {
+                            post.isArchived = isArchived;
+                            post.isStarred = isStarred;
+                            post.noteId = noteId;
+                        }
+
+                        posts.push(post);
+                    }
+                });
+
+                if (posts.length === 0) {
+                    noPostsElement.style.display = 'block';
+                    return;
+                }
+
+                // Sort posts by date (newest first)
+                posts.sort((a, b) => {
+                    const dateA = new Date(a.addedAt);
+                    const dateB = new Date(b.addedAt);
+                    return dateB - dateA;
+                });
+
+                // Render posts
+                posts.forEach(post => {
+                    const postElement = createPostElement(post);
+                    container.appendChild(postElement);
+                });
+
+            } catch (error) {
+                console.error(`Error loading ${tabType}:`, error);
+                loadingElement.style.display = 'none';
+                errorElement.style.display = 'block';
+                errorElement.textContent = `Failed to load ${tabType}: ${error.message}`;
+            }
+        }
+
+        // Initialize with default tab (videos)
+        async function loadPosts() {
+            await renderTabContent('videos');
+        }
+
+        function toggleCollapse(postDiv) {
+            postDiv.classList.toggle('collapsed');
+        }
+
+        function scrollToNextPost(currentPostDiv) {
+            const allPosts = document.querySelectorAll('.blog-post');
+            const currentIndex = Array.from(allPosts).indexOf(currentPostDiv);
+
+            if (currentIndex >= 0 && currentIndex < allPosts.length - 1) {
+                const nextPost = allPosts[currentIndex + 1];
+                const offset = nextPost.offsetTop - 20; // 20px extra padding
+
+                window.scrollTo({
+                    top: offset,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        // Auto mark post as read when audio finishes (if enabled)
+        function autoMarkPostAsRead(listenButton) {
+            // Check if setting is enabled
+            if (!window.autoMarkReadEnabled) return;
+
+            if (!listenButton) return;
+
+            // Find the post containing this listen button
+            const postDiv = listenButton.closest('.blog-post');
+            if (!postDiv) return;
+
+            // Skip if already read
+            if (postDiv.classList.contains('read')) return;
+
+            // Find the bottom mark-as-read button and click it
+            const bottomBtn = postDiv.querySelector('.mark-read-btn-bottom');
+            if (bottomBtn) {
+                console.log('Auto-marking post as read after audio finished');
+                bottomBtn.click();
+            }
+        }
+
+        // Auto play next post's audio when current finishes (if enabled)
+        function autoContinuousPlay(listenButton) {
+            // Check if setting is enabled
+            if (!window.continuousPlayEnabled) return;
+
+            if (!listenButton) return;
+
+            // Find the post containing this listen button
+            const postDiv = listenButton.closest('.blog-post');
+            if (!postDiv) return;
+
+            // Find the next post
+            const container = postDiv.parentElement;
+            const allPosts = Array.from(container.querySelectorAll('.blog-post'));
+            const currentIndex = allPosts.indexOf(postDiv);
+
+            if (currentIndex >= 0 && currentIndex < allPosts.length - 1) {
+                const nextPost = allPosts[currentIndex + 1];
+
+                // Find the listen button in the next post
+                const nextListenBtn = nextPost.querySelector('.listen-btn');
+                if (nextListenBtn) {
+                    console.log('Continuous play: starting audio for next post');
+                    // Small delay to let the current audio fully clean up
+                    setTimeout(() => {
+                        nextListenBtn.click();
+                    }, 500);
+                }
+            }
+        }
+
+        function toggleReadStatus(postDiv, button, videoUrl) {
+            const isRead = postDiv.classList.contains('read');
+
+            // Find the bottom button
+            const bottomButton = postDiv.querySelector('.mark-read-btn-bottom');
+
+            if (isRead) {
+                // Mark as unread - force expand
+                postDiv.classList.remove('read', 'collapsed');
+
+                // Update button
+                if (bottomButton) {
+                    bottomButton.textContent = 'Mark as read';
+                    bottomButton.classList.remove('read');
+                }
+
+                // Call webhook for unread (read=0)
+                callWebhook(videoUrl, 0);
+            } else {
+                // Mark as read - force collapse
+                postDiv.classList.add('read', 'collapsed');
+
+                // Update button
+                if (bottomButton) {
+                    bottomButton.textContent = 'Mark as unread';
+                    bottomButton.classList.add('read');
+                }
+
+                // Call webhook for read (read=1)
+                callWebhook(videoUrl, 1);
+
+                // Scroll to next post after marking as read
+                setTimeout(() => {
+                    scrollToNextPost(postDiv);
+                }, 300); // Small delay to allow collapse animation
+            }
+        }
+
+        function toggleReadStatusNoCollapse(postDiv, button, videoUrl) {
+            const isRead = postDiv.classList.contains('read');
+
+            // Find both buttons to sync them
+            const topButton = postDiv.querySelector('.mark-read-btn');
+            const bottomButton = postDiv.querySelector('.mark-read-btn-bottom');
+
+            if (isRead) {
+                // Mark as unread - don't change collapse state
+                postDiv.classList.remove('read');
+
+                // Update both buttons
+                if (topButton) {
+                    topButton.textContent = 'Mark as read';
+                    topButton.classList.remove('read');
+                }
+                if (bottomButton) {
+                    bottomButton.textContent = 'Mark as read';
+                    bottomButton.classList.remove('read');
+                }
+
+                // Call webhook for unread (read=0)
+                callWebhook(videoUrl, 0);
+            } else {
+                // Mark as read - don't change collapse state
+                postDiv.classList.add('read');
+
+                // Update both buttons
+                if (topButton) {
+                    topButton.textContent = 'Mark as unread';
+                    topButton.classList.add('read');
+                }
+                if (bottomButton) {
+                    bottomButton.textContent = 'Mark as unread';
+                    bottomButton.classList.add('read');
+                }
+
+                // Call webhook for read (read=1)
+                callWebhook(videoUrl, 1);
+
+                // Scroll to next post after marking as read
+                setTimeout(() => {
+                    scrollToNextPost(postDiv);
+                }, 300); // Small delay to allow collapse animation
+            }
+        }
+
+        // Toggle archive status for Notes
+        function toggleArchiveStatus(postDiv, button, post) {
+            const isArchived = postDiv.classList.contains('read'); // Using 'read' class for archived state
+
+            if (isArchived) {
+                // Unarchive - force expand
+                postDiv.classList.remove('read');
+                postDiv.classList.remove('collapsed');
+
+                // Update button
+                button.textContent = 'Archive';
+                button.classList.remove('read');
+
+                // Update post object
+                post.isArchived = false;
+
+                // Call webhook for unarchive
+                if (post.noteId) {
+                    callArchiveWebhook(post.noteId, false);
+                }
+
+                console.log('Note unarchived');
+            } else {
+                // Archive - collapse
+                postDiv.classList.add('read');
+                postDiv.classList.add('collapsed');
+
+                // Update button
+                button.textContent = 'Unarchive';
+                button.classList.add('read');
+
+                // Update post object
+                post.isArchived = true;
+
+                // Call webhook for archive
+                if (post.noteId) {
+                    callArchiveWebhook(post.noteId, true);
+                }
+
+                console.log('Note archived');
+
+                // Scroll to next post after archiving
+                setTimeout(() => {
+                    scrollToNextPost(postDiv);
+                }, 300); // Small delay to allow collapse animation
+            }
+
+            // Clear cached notes data to reflect changes
+            cachedData.notes = null;
+        }
+
+        // Call archive webhook for Notes
+        // Call archive webhook for Notes
+        function callArchiveWebhook(noteId, isArchived) {
+            const baseUrl = localStorage.getItem('learner_webhook_base_url');
+            if (!baseUrl) {
+                console.warn('Webhook base URL not configured. Action will be local only.');
+                showOfflineNotification('Webhook URL missing. Configure in settings.');
+                return;
+            }
+
+            if (!noteId) {
+                console.error('No note ID provided for archive webhook');
+                return;
+            }
+
+            const archivedFlag = isArchived ? 1 : 0;
+            const webhookUrl = `${baseUrl}19e8e145-f9fb-4b1c-aae9-13d0b91c83a6?id=${encodeURIComponent(noteId)}&archived=${archivedFlag}`;
+
+            fetch(webhookUrl, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log(`Archive webhook called successfully for note ${noteId}, archived: ${isArchived}`);
+                } else {
+                    console.error('Archive webhook call failed:', response.status);
+                }
+            })
+            .catch(error => {
+                console.error('Archive webhook call error:', error);
+            });
+        }
+
+        function updateStarButtonIcon(button, isStarred) {
+            if (isStarred) {
+                button.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    </svg>
+                `;
+                button.classList.add('starred');
+            } else {
+                button.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+                button.classList.remove('starred');
+            }
+        }
+
+        function callStarWebhook(noteId, shouldStar) {
+            const baseUrl = localStorage.getItem('learner_webhook_base_url');
+            if (!baseUrl) {
+                console.warn('Webhook base URL not configured. Action will be local only.');
+                showOfflineNotification('Webhook URL missing. Configure in settings.');
+                return Promise.reject('Webhook URL not configured');
+            }
+
+            const starFlag = shouldStar ? 1 : 0;
+            const webhookUrl = `${baseUrl}0e0309d6-1c6c-4edf-baab-3205a01e9224?id=${encodeURIComponent(noteId)}&star=${starFlag}`;
+
+            return fetch(webhookUrl, {
+                method: 'GET'
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error(`Star webhook failed with status ${response.status}`);
+                }
+                return response;
+            });
+        }
+
+        // Offline queue management
+        let offlineQueue = JSON.parse(localStorage.getItem('learner_offline_queue') || '[]');
+        let isOnline = navigator.onLine;
+
+        // Save queue to localStorage
+        function saveQueue() {
+            localStorage.setItem('learner_offline_queue', JSON.stringify(offlineQueue));
+        }
+
+        // Add action to offline queue
+        function queueAction(videoUrl, readStatus) {
+            const action = {
+                id: Date.now() + Math.random(),
+                videoUrl: videoUrl,
+                readStatus: readStatus,
+                timestamp: new Date().toISOString()
+            };
+
+            // Remove any existing action for the same video to avoid duplicates
+            offlineQueue = offlineQueue.filter(item => item.videoUrl !== videoUrl);
+            offlineQueue.push(action);
+            saveQueue();
+
+            console.log('Action queued for offline sync:', action);
+            showOfflineNotification('Action saved for when you\'re back online');
+        }
+
+        // Process offline queue when back online
+        function processOfflineQueue() {
+            if (offlineQueue.length === 0) return;
+
+            console.log(`Processing ${offlineQueue.length} queued actions...`);
+            showSyncNotification('Syncing offline actions...');
+
+            const queueCopy = [...offlineQueue];
+            offlineQueue = [];
+            saveQueue();
+
+            let processed = 0;
+            let failed = [];
+
+            queueCopy.forEach(action => {
+                callWebhookDirect(action.videoUrl, action.readStatus)
+                    .then(() => {
+                        processed++;
+                        if (processed + failed.length === queueCopy.length) {
+                            if (failed.length === 0) {
+                                showSyncNotification('All offline actions synced successfully!');
+                            } else {
+                                // Re-queue failed actions
+                                offlineQueue = [...offlineQueue, ...failed];
+                                saveQueue();
+                                showSyncNotification(`${processed} actions synced, ${failed.length} failed`);
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        failed.push(action);
+                        if (processed + failed.length === queueCopy.length) {
+                            // Re-queue failed actions
+                            offlineQueue = [...offlineQueue, ...failed];
+                            saveQueue();
+                            showSyncNotification(`${processed} actions synced, ${failed.length} failed`);
+                        }
+                    });
+            });
+        }
+
+        // Direct webhook call that returns a promise
+        function callWebhookDirect(videoUrl, readStatus) {
+            const baseUrl = localStorage.getItem('learner_webhook_base_url');
+            if (!baseUrl) {
+                console.warn('Webhook base URL not configured.');
+                showOfflineNotification('Webhook URL missing. Configure in settings.');
+                return Promise.reject('Webhook URL not configured');
+            }
+
+            const webhookUrl = `${baseUrl}7bda285f-8e6a-4519-a58d-836fc62ff4b2?url=${encodeURIComponent(videoUrl)}&read=${readStatus}`;
+
+            return fetch(webhookUrl, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Webhook called successfully');
+                    return response;
+                } else {
+                    console.error('Webhook call failed:', response.status);
+                    const error = new Error(`HTTP ${response.status}`);
+                    error.status = response.status;
+                    throw error;
+                }
+            });
+        }
+
+        // Call webhook to update read status (with offline support)
+        function callWebhook(videoUrl, readStatus) {
+            if (!isOnline) {
+                queueAction(videoUrl, readStatus);
+                return;
+            }
+
+            callWebhookDirect(videoUrl, readStatus)
+                .then(() => {
+                    // Show sync notification immediately when task is completed online
+                    showSyncNotification('Synced');
+                })
+                .catch(error => {
+                    console.error('Error calling webhook:', error);
+
+                    // Check if it's an internal server error (5xx)
+                    if (error.status && error.status >= 500 && error.status < 600) {
+                        // For internal server errors, show failed notification instead of queuing
+                        console.log('Internal server error - not queuing request');
+                        showSyncNotification('Failed');
+                    } else {
+                        // For other errors (network issues, 4xx errors), queue the request
+                        queueAction(videoUrl, readStatus);
+                    }
+                });
+        }
+
+        // Show offline notification
+        function showOfflineNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #ff9800;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 4px;
+                z-index: 1000;
+                font-size: calc(0.9rem * var(--font-scale));
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        function showSyncNotification() {
+            // Remove any existing notification
+            const existingNotification = document.querySelector('.sync-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            // Create new notification
+            const notification = document.createElement('div');
+            notification.className = 'sync-notification';
+            notification.textContent = 'Synced';
+            document.body.appendChild(notification);
+
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            // Hide and remove notification after 1 second
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 1000);
+        }
+
+        // Search functionality
+        function setupSearch() {
+            const searchBar = document.getElementById('search-bar');
+
+            searchBar.addEventListener('input', function() {
+                applyCurrentSearchFilter();
+            });
+        }
+
+        function applyCurrentSearchFilter() {
+            const searchBar = document.getElementById('search-bar');
+            if (!searchBar) return;
+
+            const searchTerm = searchBar.value.toLowerCase().trim();
+            const currentContainer = document.getElementById(`${currentTab}-container`);
+            if (!currentContainer) return;
+
+            const posts = currentContainer.querySelectorAll('.blog-post');
+            posts.forEach(post => {
+                const title = post.querySelector('.post-title').textContent.toLowerCase();
+                const content = post.querySelector('.post-content').textContent.toLowerCase();
+
+                if (searchTerm === '' || title.includes(searchTerm) || content.includes(searchTerm)) {
+                    post.style.display = '';
+                } else {
+                    post.style.display = 'none';
+                }
+            });
+        }
+
+        // Floating nav functionality
+        function setupFloatingNav() {
+            const floatingNav = document.getElementById('floating-nav');
+            const prevBtn = document.getElementById('floating-prev');
+            const markBtn = document.getElementById('floating-mark');
+            const nextBtn = document.getElementById('floating-next');
+            const bottomTabs = document.querySelector('.bottom-tabs');
+            let scrollTimeout = null;
+
+            function updateVisibility() {
+                if (!floatingNav) return;
+                const hasPosts = document.querySelector(`#${currentTab}-container .blog-post`);
+                const tabsHidden = bottomTabs && bottomTabs.classList.contains('hidden');
+
+                if (hasPosts) {
+                    floatingNav.classList.add('visible');
+                    floatingNav.classList.toggle('tabs-visible', !tabsHidden);
+                } else {
+                    floatingNav.classList.remove('visible');
+                }
+                updateFloatingMarkState();
+            }
+
+            function handleScroll() {
+                updateVisibility();
+                floatingNav.classList.add('scrolling');
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    floatingNav.classList.remove('scrolling');
+                }, 1000);
+            }
+
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            window.addEventListener('resize', updateVisibility);
+
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const current = getCurrentVisiblePost();
+                if (current) {
+                    scrollToAdjacentPost(current, -1);
+                }
+            });
+
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const current = getCurrentVisiblePost();
+                if (current) {
+                    scrollToAdjacentPost(current, 1);
+                }
+            });
+
+            markBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Check if ANY audio is playing - if so, pause it instead of marking as read
+                const allListenButtons = document.querySelectorAll('.listen-btn');
+                for (const btn of allListenButtons) {
+                    if (btn.speechState?.isPlaying && !btn.speechState?.isPaused) {
+                        // Pause the audio by clicking the listen button
+                        btn.click();
+                        updateFloatingMarkState();
+                        return;
+                    }
+                }
+
+                let current = getCurrentVisiblePost();
+                if (!current) return;
+
+                // If current post is already read/archived, assume user wants to mark the NEXT post
+                if (current.classList.contains('read')) {
+                    const container = current.parentElement;
+                    const allPosts = Array.from(container.querySelectorAll('.blog-post'));
+                    const idx = allPosts.indexOf(current);
+                    if (idx !== -1 && idx < allPosts.length - 1) {
+                        current = allPosts[idx + 1];
+                    }
+                }
+
+                // Only perform action if the target post is NOT read/archived
+                // This ensures the button only ever performs "Mark as read" (or "Archive")
+                if (!current.classList.contains('read')) {
+                    const bottomBtn = current.querySelector('.mark-read-btn-bottom');
+                    if (bottomBtn) {
+                        bottomBtn.click();
+                        updateFloatingMarkState();
+                    }
+                }
+            });
+
+            updateVisibility();
+        }
+
+        function updateFloatingMarkState() {
+            const markBtn = document.getElementById('floating-mark');
+            if (!markBtn) return;
+
+            // Update header audio control based on current visible post
+            updateHeaderAudioControl();
+
+            // Floating mark button always shows checkmark and works as "Mark as read"
+            // It never turns green (completed) and never toggles to "Mark as unread"
+            markBtn.classList.remove('audio-playing', 'completed');
+            markBtn.setAttribute('aria-label', 'Mark as read');
+            markBtn.title = 'Mark as read';
+            setFloatingMarkIcon(markBtn, 'check');
+        }
+
+        // Update header audio control state based on current visible post
+        function updateHeaderAudioControl() {
+            const headerControl = document.getElementById('header-audio-control');
+            const headerBtn = document.getElementById('header-audio-btn');
+            const headerTitle = document.getElementById('header-title');
+            if (!headerBtn || !headerControl) return;
+
+            // Hide audio control when header shows "Learner" (no post title)
+            const isShowingPostTitle = headerTitle && headerTitle.textContent !== 'Learner';
+            if (!isShowingPostTitle) {
+                headerControl.style.display = 'none';
+                headerBtn._activeListenButton = null;
+                return;
+            }
+            headerControl.style.display = 'flex';
+
+            // Get the current visible post
+            const currentPost = getCurrentVisiblePost();
+            if (!currentPost) {
+                // No visible post - show play icon
+                headerBtn.classList.remove('playing');
+                headerBtn.title = 'Play audio';
+                headerBtn._activeListenButton = null;
+                setHeaderAudioIcon(headerBtn, 'play');
+                return;
+            }
+
+            // Find the listen button for the current visible post
+            const listenBtn = currentPost.querySelector('.listen-btn');
+            headerBtn._activeListenButton = listenBtn;
+
+            if (!listenBtn || !listenBtn.speechState) {
+                // No listen button or no speech state - show play icon
+                headerBtn.classList.remove('playing');
+                headerBtn.title = 'Play audio';
+                setHeaderAudioIcon(headerBtn, 'play');
+                return;
+            }
+
+            const { isPlaying, isPaused } = listenBtn.speechState;
+
+            if (isPlaying && !isPaused) {
+                // Current post's audio is playing - show pause icon
+                headerBtn.classList.add('playing');
+                headerBtn.title = 'Pause audio';
+                setHeaderAudioIcon(headerBtn, 'pause');
+            } else {
+                // Current post's audio is not playing (or paused) - show play icon
+                headerBtn.classList.remove('playing');
+                headerBtn.title = isPaused ? 'Resume audio' : 'Play audio';
+                setHeaderAudioIcon(headerBtn, 'play');
+            }
+        }
+
+        function setHeaderAudioIcon(btn, type) {
+            if (type === 'pause') {
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                        <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                    </svg>
+                `;
+            } else {
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                `;
+            }
+        }
+
+        function setFloatingMarkIcon(markBtn, type) {
+            if (type === 'pause') {
+                markBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="7" y="5" width="1" height="14" rx="1" />
+                        <rect x="14.5" y="5" width="1" height="14" rx="1" />
+                    </svg>
+                `;
+            } else {
+                markBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 13l4 4L19 7" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                `;
+            }
+        }
+
+        function getCurrentVisiblePost() {
+            const activeContainer = document.getElementById(`${currentTab}-container`);
+            if (!activeContainer) return null;
+            const posts = Array.from(activeContainer.querySelectorAll('.blog-post'));
+            if (!posts.length) return null;
+            const viewportMiddle = window.scrollY + window.innerHeight / 2;
+            return posts.reduce((closest, post) => {
+                const rect = post.getBoundingClientRect();
+                const postMiddle = rect.top + window.scrollY + rect.height / 2;
+                const distance = Math.abs(postMiddle - viewportMiddle);
+                if (!closest || distance < closest.distance) {
+                    return { element: post, distance };
+                }
+                return closest;
+            }, null)?.element || posts[0] || null;
+        }
+
+        function scrollToAdjacentPost(currentPostDiv, direction) {
+            if (!currentPostDiv || typeof direction !== 'number') return;
+            const container = currentPostDiv.closest('.tab-content');
+            const posts = container ? Array.from(container.querySelectorAll('.blog-post')) : [];
+            if (!posts.length) return;
+            const currentIndex = posts.indexOf(currentPostDiv);
+            const target = posts[currentIndex + direction];
+            if (!target) return;
+            const offset = target.offsetTop - 20;
+
+            window.scrollTo({
+                top: offset,
+                behavior: 'smooth'
+            });
+        }
+
+        // Collapse/Expand all functionality
+        function setupCollapseAll() {
+            const collapseAllBtn = document.getElementById('collapse-all-btn');
+            let allCollapsed = false;
+
+            function updateIcon() {
+                const svg = collapseAllBtn.querySelector('svg');
+                const path = svg.querySelector('path');
+
+                if (allCollapsed) {
+                    // Show down arrow for expand
+                    path.setAttribute('d', 'M6 9L12 15L18 9');
+                    collapseAllBtn.setAttribute('title', 'Expand All');
+                } else {
+                    // Show up arrow for collapse
+                    path.setAttribute('d', 'M18 15L12 9L6 15');
+                    collapseAllBtn.setAttribute('title', 'Collapse All');
+                }
+            }
+
+            collapseAllBtn.addEventListener('click', function() {
+                // Get current tab container
+                const currentContainer = document.getElementById(`${currentTab}-container`);
+                const posts = currentContainer.querySelectorAll('.blog-post');
+
+                if (allCollapsed) {
+                    // Expand all
+                    posts.forEach(post => {
+                        post.classList.remove('collapsed');
+                    });
+                    allCollapsed = false;
+                } else {
+                    // Collapse all
+                    posts.forEach(post => {
+                        post.classList.add('collapsed');
+                    });
+                    allCollapsed = true;
+                }
+
+                updateIcon();
+            });
+
+            // Initialize with correct icon
+            updateIcon();
+        }
+
+        // Text highlighting functionality
+        function setupTextHighlighting() {
+            let tooltip = null;
+
+            document.addEventListener('mouseup', function(e) {
+                // Small delay to ensure selection is complete
+                setTimeout(() => {
+                    const selection = window.getSelection();
+                    const selectedText = selection.toString().trim();
+
+                    // Remove existing tooltip
+                    if (tooltip) {
+                        tooltip.remove();
+                        tooltip = null;
+                    }
+
+                    // Only show tooltip if text is selected and it's within post content
+                    if (selectedText && selection.rangeCount > 0 && selectedText.length > 2) {
+                        const range = selection.getRangeAt(0);
+                        const container = range.commonAncestorContainer;
+
+                        // Check if selection is within post content
+                        let element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+                        const postContent = element.closest('.post-content');
+
+                        console.log('Post content found:', !!postContent); // Debug log
+
+                        if (postContent) {
+                            showHighlightTooltip(range);
+                        }
+                    }
+                }, 10);
+            });
+
+            // Hide tooltip when clicking elsewhere
+            document.addEventListener('mousedown', function(e) {
+                if (tooltip && !tooltip.contains(e.target)) {
+                    tooltip.remove();
+                    tooltip = null;
+                }
+            });
+
+            function showHighlightTooltip(range) {
+                tooltip = document.createElement('div');
+                tooltip.className = 'highlight-tooltip';
+                tooltip.textContent = 'Highlight';
+
+                // Position tooltip above the selection
+                const rect = range.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                tooltip.style.position = 'absolute';
+                tooltip.style.left = Math.max(10, rect.left + rect.width / 2) + 'px';
+                tooltip.style.top = (rect.top + scrollTop - 45) + 'px';
+                tooltip.style.transform = 'translateX(-50%)';
+
+                console.log('Tooltip positioned at:', tooltip.style.left, tooltip.style.top); // Debug log
+
+                document.body.appendChild(tooltip);
+
+                tooltip.addEventListener('click', function() {
+                    highlightSelection(range);
+                    tooltip.remove();
+                    tooltip = null;
+                    window.getSelection().removeAllRanges();
+                });
+            }
+
+            function highlightSelection(range) {
+                try {
+                    // Check if selection spans across different block elements (like list items)
+                    const startContainer = range.startContainer;
+                    const endContainer = range.endContainer;
+
+                    // Get the closest block elements
+                    const startBlock = getClosestBlockElement(startContainer);
+                    const endBlock = getClosestBlockElement(endContainer);
+
+                    // If selection spans across different block elements, highlight each separately
+                    if (startBlock !== endBlock) {
+                        console.log('Selection spans across different block elements, highlighting each separately');
+                        highlightAcrossBlocks(range);
+                        return;
+                    }
+
+                    // Check if we're inside a list item and the selection is complex
+                    const listItem = range.commonAncestorContainer.nodeType === Node.TEXT_NODE ?
+                        range.commonAncestorContainer.parentElement.closest('li') :
+                        range.commonAncestorContainer.closest('li');
+
+                    if (listItem) {
+                        // For list items, use a safer highlighting approach
+                        highlightInListItem(range);
+                    } else {
+                        // Standard highlighting for regular text
+                        const contents = range.extractContents();
+                        const span = document.createElement('span');
+                        span.className = 'highlight';
+                        span.appendChild(contents);
+                        range.insertNode(span);
+
+                        addRemoveHighlightHandler(span);
+                    }
+                } catch (error) {
+                    console.error('Error highlighting text:', error);
+                }
+            }
+
+            function highlightAcrossBlocks(range) {
+                // Get all text nodes within the selection
+                const walker = document.createTreeWalker(
+                    range.commonAncestorContainer,
+                    NodeFilter.SHOW_TEXT,
+                    {
+                        acceptNode: function(node) {
+                            // Only include text nodes that are within the selection
+                            const nodeRange = document.createRange();
+                            nodeRange.selectNodeContents(node);
+
+                            // Check if this text node intersects with our selection
+                            if (range.intersectsNode(node)) {
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                    }
+                );
+
+                const textNodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    textNodes.push(node);
+                }
+
+                // Process each text node that intersects with the selection
+                textNodes.forEach(textNode => {
+                    const blockElement = getClosestBlockElement(textNode);
+                    if (!blockElement) return;
+
+                    // Create a range for this specific text node
+                    const nodeRange = document.createRange();
+                    nodeRange.selectNodeContents(textNode);
+
+                    // Find the intersection with the original selection
+                    const intersectionRange = document.createRange();
+
+                    // Determine start and end points for this text node
+                    let startOffset = 0;
+                    let endOffset = textNode.textContent.length;
+
+                    // If this is the start node, use the selection's start offset
+                    if (textNode === range.startContainer) {
+                        startOffset = range.startOffset;
+                    }
+
+                    // If this is the end node, use the selection's end offset
+                    if (textNode === range.endContainer) {
+                        endOffset = range.endOffset;
+                    }
+
+                    // Only highlight if there's actual text to highlight
+                    if (startOffset < endOffset) {
+                        intersectionRange.setStart(textNode, startOffset);
+                        intersectionRange.setEnd(textNode, endOffset);
+
+                        // Highlight this portion
+                        highlightSingleRange(intersectionRange);
+                    }
+                });
+            }
+
+            function highlightSingleRange(range) {
+                try {
+                    const contents = range.extractContents();
+                    const span = document.createElement('span');
+                    span.className = 'highlight';
+                    span.appendChild(contents);
+                    range.insertNode(span);
+
+                    addRemoveHighlightHandler(span);
+                } catch (error) {
+                    console.error('Error highlighting single range:', error);
+                }
+            }
+
+            function getClosestBlockElement(node) {
+                const blockElements = ['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE'];
+                let current = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+
+                while (current && current !== document.body) {
+                    if (blockElements.includes(current.tagName)) {
+                        return current;
+                    }
+                    current = current.parentElement;
+                }
+                return null;
+            }
+
+            function highlightInListItem(range) {
+                // For list items, we'll wrap the text more carefully
+                const selection = range.toString();
+                const startOffset = range.startOffset;
+                const endOffset = range.endOffset;
+                const container = range.startContainer;
+
+                if (container.nodeType === Node.TEXT_NODE && range.startContainer === range.endContainer) {
+                    // Simple case: selection within a single text node
+                    const textNode = container;
+                    const beforeText = textNode.textContent.substring(0, startOffset);
+                    const selectedText = textNode.textContent.substring(startOffset, endOffset);
+                    const afterText = textNode.textContent.substring(endOffset);
+
+                    // Create new nodes
+                    const beforeNode = document.createTextNode(beforeText);
+                    const highlightSpan = document.createElement('span');
+                    highlightSpan.className = 'highlight';
+                    highlightSpan.textContent = selectedText;
+                    const afterNode = document.createTextNode(afterText);
+
+                    // Replace the original text node
+                    const parent = textNode.parentNode;
+                    parent.insertBefore(beforeNode, textNode);
+                    parent.insertBefore(highlightSpan, textNode);
+                    parent.insertBefore(afterNode, textNode);
+                    parent.removeChild(textNode);
+
+                    addRemoveHighlightHandler(highlightSpan);
+                } else {
+                    console.log('Complex list selection, skipping highlight to preserve structure');
+                }
+            }
+
+            function addRemoveHighlightHandler(span) {
+                span.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const parent = span.parentNode;
+                    const textContent = span.textContent;
+                    const textNode = document.createTextNode(textContent);
+                    parent.replaceChild(textNode, span);
+                    parent.normalize(); // Merge adjacent text nodes
+                });
+            }
+        }
+
+
+        // Header title update functionality
+        function setupHeaderTitleUpdate() {
+            const headerTitle = document.getElementById('header-title');
+            const headerMenu = document.getElementById('header-menu');
+            const headerProgress = document.getElementById('header-progress');
+            let currentPost = null;
+            const originalTitle = 'Learner';
+
+            window.addEventListener('scroll', function() {
+                const scrollTop = window.pageYOffset;
+                currentPost = null;
+
+                // Get posts from the currently active tab container
+                const activeContainer = document.getElementById(`${currentTab}-container`);
+                if (!activeContainer) return;
+
+                const posts = activeContainer.querySelectorAll('.blog-post');
+                if (posts.length === 0) return;
+
+                // Calculate the bottom position of the fixed header
+                const headerHeight = 70; // Header height with padding
+                const headerBottomPosition = scrollTop + headerHeight;
+
+                // Find which post is currently in view under the header
+                for (let i = 0; i < posts.length; i++) {
+                    const post = posts[i];
+                    const postTop = post.offsetTop;
+                    const postBottom = postTop + post.offsetHeight;
+
+                    // Check if the header bottom overlaps with this post
+                    if (headerBottomPosition >= postTop && headerBottomPosition <= postBottom) {
+                        currentPost = post;
+                        break;
+                    }
+                }
+
+                // Update header title and settings icon visibility based on current post
+                if (currentPost && scrollTop > 100) {
+                    const titleElement = currentPost.querySelector('.post-title');
+                    if (titleElement) {
+                        const postTitle = titleElement.textContent || titleElement.innerText;
+                        headerTitle.textContent = postTitle;
+                        headerMenu.style.display = 'none'; // Hide settings icon
+                    }
+
+                    // Update progress bar based on scroll position within current post
+                    const postTop = currentPost.offsetTop;
+                    const postHeight = currentPost.offsetHeight;
+                    const scrolledInPost = headerBottomPosition - postTop;
+                    const progress = Math.min(100, Math.max(0, (scrolledInPost / postHeight) * 100));
+                    headerProgress.style.width = `${progress}%`;
+                } else {
+                    headerTitle.textContent = originalTitle;
+                    headerMenu.style.display = 'flex'; // Show settings icon
+                    headerProgress.style.width = '0%'; // Hide progress bar
+                }
+            });
+
+            // Click handler for header title to scroll to current post
+            headerTitle.addEventListener('click', function() {
+                if (currentPost && headerTitle.textContent !== originalTitle) {
+                    const headerHeight = 70; // Header height with padding
+                    const offset = currentPost.offsetTop - headerHeight;
+                    window.scrollTo({
+                        top: offset,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        }
+
+        // Reset header title to default when switching tabs
+        function resetHeaderTitle() {
+            const headerTitle = document.getElementById('header-title');
+            const headerMenu = document.getElementById('header-menu');
+            const originalTitle = 'Learner';
+
+            headerTitle.textContent = originalTitle;
+            headerMenu.style.display = 'flex'; // Show settings icon
+        }
+
+        // Sync functionality is now handled in hamburger menu
+
+        // Google Cloud Text-to-Speech API configuration
+        const GOOGLE_CLOUD_TTS_CONFIG = {
+            apiKey: localStorage.getItem('googleCloudTTSApiKey') || '', // Google Cloud API key from settings
+            endpoint: 'https://texttospeech.googleapis.com/v1/text:synthesize',
+            maxTextBytes: 4000, // Use chunking for text over this limit
+            voice: {
+                languageCode: 'zh-CN',
+                ssmlGender: 'FEMALE'
+            },
+            fallbackVoice: {
+                languageCode: 'en-US',
+                ssmlGender: 'FEMALE'
+            },
+            audioConfig: {
+                audioEncoding: 'MP3',
+                speakingRate: 1.2,
+                pitch: 0.0,
+                volumeGainDb: 0.0
+            }
+        };
+
+        // Speech synthesis functionality using Google Cloud TTS with streaming support
+        async function toggleSpeech(button) {
+            const speechState = button.speechState;
+
+            // Stop all other playing audio first
+            stopAllOtherAudio(button);
+
+            if (speechState.isPlaying) {
+                // Pause current audio (works for both single and streaming audio)
+                if (speechState.audioQueueManager) {
+                    // Streaming audio
+                    speechState.audioQueueManager.pause();
+                } else if (speechState.audio) {
+                    // Single chunk audio
+                    speechState.audio.pause();
+                }
+
+                speechState.isPlaying = false;
+                speechState.isPaused = true;
+                button.classList.remove('playing');
+                button.classList.add('paused');
+                button.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                `;
+                updateFloatingMarkState();
+            } else if (speechState.isPaused) {
+                // Resume paused audio (works for both single and streaming audio)
+                if (speechState.audioQueueManager) {
+                    // Streaming audio
+                    await speechState.audioQueueManager.resume();
+                } else if (speechState.audio) {
+                    // Single chunk audio
+                    await speechState.audio.play();
+                }
+
+                speechState.isPlaying = true;
+                speechState.isPaused = false;
+                button.classList.remove('paused');
+                button.classList.add('playing');
+                button.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                        <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                    </svg>
+                `;
+                updateFloatingMarkState();
+            } else {
+                // Check if API key is configured
+                if (!GOOGLE_CLOUD_TTS_CONFIG.apiKey) {
+                    alert('Please configure your Google Cloud Text-to-Speech API key in the GOOGLE_CLOUD_TTS_CONFIG object.');
+                    return;
+                }
+
+                // Start new speech - get text content from post content div, excluding tables
+                const postElement = button.closest('.blog-post');
+                const contentDiv = postElement.querySelector('.post-content');
+                let textToSpeak = 'Overview.';
+
+                if (contentDiv) {
+                    // Clone the content to avoid modifying the original
+                    const contentClone = contentDiv.cloneNode(true);
+
+                    // Remove all tables from the clone
+                    const tables = contentClone.querySelectorAll('table');
+                    tables.forEach(table => table.remove());
+
+                    // Get the text content after removing tables
+                    const contentText = contentClone.textContent || contentClone.innerText || '';
+                    textToSpeak = `Overview. ${contentText.trim()}`;
+                }
+
+                // Set up text tracking for scroll-along feature
+                if (contentDiv) {
+                    setupTextTracking(contentDiv);
+                    speechState.contentDiv = contentDiv;
+                    // Highlight first segment immediately
+                    highlightSegment(contentDiv, 0);
+                }
+
+                try {
+                    // Update button to loading state
+                    button.classList.add('loading');
+                    button.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                                <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                                <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                            </circle>
+                        </svg>
+                    `;
+
+                    // Call Google Cloud TTS API (returns either single audio or streaming result)
+                    const audioResult = await synthesizeSpeech(textToSpeak);
+
+                    // Check if this is a streaming result (multiple chunks) or single audio
+                    if (audioResult.totalChunks && audioResult.totalChunks > 1) {
+                        // Streaming audio with multiple chunks
+                        console.log(`Starting streaming playback with ${audioResult.totalChunks} chunks`);
+
+                        const audioQueueManager = new AudioQueueManager(audioResult, button, contentDiv);
+                        speechState.audioQueueManager = audioQueueManager;
+                        speechState.audio = null; // Clear single audio reference
+
+                        // Update button state
+                        speechState.isPlaying = true;
+                        speechState.isPaused = false;
+                        button.classList.remove('loading');
+                        button.classList.add('playing');
+                        button.innerHTML = `
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                                <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                            </svg>
+                        `;
+
+                        // Update floating mark button to show pause icon
+                        updateFloatingMarkState();
+
+                        // Start streaming playback
+                        await audioQueueManager.playFirstChunk();
+
+                    } else {
+                        // Single chunk audio (original behavior)
+                        const audioContent = audioResult.firstChunk || audioResult;
+
+                        const audio = new Audio();
+                        audio.src = `data:audio/mp3;base64,${audioContent}`;
+                        audio.playbackRate = window.currentPlaybackSpeed || 1.0;
+
+                        // Update button state
+                        speechState.audio = audio;
+                        speechState.audioQueueManager = null; // Clear streaming reference
+                        speechState.isPlaying = true;
+                        speechState.isPaused = false;
+                        button.classList.remove('loading');
+                        button.classList.add('playing');
+                        button.innerHTML = `
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                                <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                            </svg>
+                        `;
+
+                        // Update floating mark button to show pause icon
+                        updateFloatingMarkState();
+
+                        // Set up text tracking for single audio
+                        if (contentDiv && contentDiv._totalChars) {
+                            let lastSegmentIndex = -1;
+                            audio.ontimeupdate = function() {
+                                const charPos = estimateCharPosition(
+                                    audio.currentTime,
+                                    audio.duration,
+                                    contentDiv._totalChars,
+                                    audio.playbackRate
+                                );
+                                const segmentIndex = findSegmentByCharPosition(contentDiv, charPos);
+                                if (segmentIndex !== lastSegmentIndex) {
+                                    lastSegmentIndex = segmentIndex;
+                                    highlightSegment(contentDiv, segmentIndex);
+                                }
+                            };
+                        }
+
+                        // Handle audio end
+                        audio.onended = function() {
+                            clearTextTracking(contentDiv);
+                            resetButton(button);
+                            updateFloatingMarkState();
+                            // Auto mark as read when audio finishes
+                            autoMarkPostAsRead(button);
+                            // Auto play next post if continuous play is enabled
+                            autoContinuousPlay(button);
+                        };
+
+                        // Handle audio error
+                        audio.onerror = function() {
+                            console.error('Audio playback error');
+                            clearTextTracking(contentDiv);
+                            resetButton(button);
+                        };
+
+                        // Start playing
+                        await audio.play();
+                    }
+
+                } catch (error) {
+                    console.error('Text-to-speech error:', error);
+                    button.classList.remove('loading');
+                    resetButton(button);
+                    alert('Failed to generate speech. Please check your API key and try again.');
+                }
+            }
+        }
+
+        // Function to detect if text contains Chinese characters
+        function containsChinese(text) {
+            return /[\u4e00-\u9fff]/.test(text);
+        }
+
+        // Text tracking for audio playback - wraps content in trackable segments
+        function setupTextTracking(contentDiv) {
+            // Skip if already set up
+            if (contentDiv.dataset.trackingSetup === 'true') {
+                return getTrackingSegments(contentDiv);
+            }
+
+            const segments = [];
+            let segmentIndex = 0;
+
+            // Process all text-containing elements (paragraphs, list items, headings)
+            const textElements = contentDiv.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, blockquote');
+
+            textElements.forEach(element => {
+                // Skip elements inside tables
+                if (element.closest('table')) return;
+
+                // Get the text content for tracking
+                const text = element.textContent.trim();
+                if (!text) return;
+
+                // Wrap the element content in a tracking span
+                const wrapper = document.createElement('span');
+                wrapper.className = 'speech-tracking-segment';
+                wrapper.dataset.segmentIndex = segmentIndex;
+                wrapper.dataset.segmentText = text;
+
+                // Move all children into the wrapper
+                while (element.firstChild) {
+                    wrapper.appendChild(element.firstChild);
+                }
+                element.appendChild(wrapper);
+
+                segments.push({
+                    index: segmentIndex,
+                    element: wrapper,
+                    text: text,
+                    charStart: segmentIndex === 0 ? 0 : segments[segmentIndex - 1].charEnd,
+                    charEnd: 0 // Will be calculated below
+                });
+                segmentIndex++;
+            });
+
+            // Calculate character positions for each segment
+            let totalChars = 0;
+            segments.forEach(segment => {
+                segment.charStart = totalChars;
+                totalChars += segment.text.length;
+                segment.charEnd = totalChars;
+            });
+
+            contentDiv.dataset.trackingSetup = 'true';
+            contentDiv._trackingSegments = segments;
+            contentDiv._totalChars = totalChars;
+
+            return segments;
+        }
+
+        // Get existing tracking segments
+        function getTrackingSegments(contentDiv) {
+            return contentDiv._trackingSegments || [];
+        }
+
+        // Highlight current segment and scroll to it
+        function highlightSegment(contentDiv, segmentIndex) {
+            const segments = getTrackingSegments(contentDiv);
+
+            // Remove highlight from all segments
+            segments.forEach(seg => {
+                seg.element.classList.remove('current-speech');
+            });
+
+            // Add highlight to current segment
+            if (segmentIndex >= 0 && segmentIndex < segments.length) {
+                const currentSegment = segments[segmentIndex];
+                currentSegment.element.classList.add('current-speech');
+
+                // Scroll to the segment smoothly
+                currentSegment.element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }
+
+        // Find segment index based on character position
+        function findSegmentByCharPosition(contentDiv, charPosition) {
+            const segments = getTrackingSegments(contentDiv);
+
+            for (let i = 0; i < segments.length; i++) {
+                if (charPosition >= segments[i].charStart && charPosition < segments[i].charEnd) {
+                    return i;
+                }
+            }
+
+            // Return last segment if position is beyond all segments
+            return segments.length - 1;
+        }
+
+        // Clear all text tracking highlights
+        function clearTextTracking(contentDiv) {
+            if (!contentDiv) return;
+
+            const segments = getTrackingSegments(contentDiv);
+            segments.forEach(seg => {
+                seg.element.classList.remove('current-speech');
+            });
+        }
+
+        // Estimate character position based on audio time
+        // Uses average speaking rate of ~150 words per minute (~12.5 chars/second for English)
+        function estimateCharPosition(currentTime, duration, totalChars, playbackRate = 1.0) {
+            if (duration <= 0) return 0;
+
+            // Calculate progress through the audio
+            const progress = currentTime / duration;
+
+            // Estimate character position based on progress
+            return Math.floor(progress * totalChars);
+        }
+
+        // Function to extract YouTube video ID from URL
+        function extractYouTubeVideoId(url) {
+            if (!url) return null;
+
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+                /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+            ];
+
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+
+        // Function to create YouTube embed iframe with error handling
+        function createYouTubeEmbed(videoUrl) {
+            const videoId = extractYouTubeVideoId(videoUrl);
+            if (!videoId) return null;
+
+            const embedContainer = document.createElement('div');
+            embedContainer.className = 'youtube-embed-container';
+
+            // Create iframe with error handling
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${window.location.origin}&playsinline=1&rel=0&modestbranding=1&fs=1&controls=1`;
+            iframe.frameBorder = '0';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            iframe.loading = 'lazy';
+            iframe.title = 'YouTube video player';
+            iframe.sandbox = 'allow-scripts allow-same-origin allow-presentation allow-forms allow-popups allow-popups-to-escape-sandbox';
+
+            // Add error handling for iframe load failures
+            iframe.onerror = function() {
+                console.warn('YouTube embed failed, creating fallback link');
+                createYouTubeFallback(embedContainer, videoUrl, videoId);
+            };
+
+            // Also listen for load event to check if embed is blocked
+            iframe.onload = function() {
+                // Small delay to check if the iframe content loaded properly
+                setTimeout(() => {
+                    try {
+                        // If we can't access the iframe content, it might be blocked
+                        if (iframe.contentWindow && iframe.contentWindow.location.href === 'about:blank') {
+                            console.warn('YouTube embed may be blocked, showing fallback');
+                            createYouTubeFallback(embedContainer, videoUrl, videoId);
+                        }
+                    } catch (e) {
+                        // Cross-origin error is expected, iframe is working
+                    }
+                }, 1000);
+            };
+
+            embedContainer.appendChild(iframe);
+            return embedContainer;
+        }
+
+        // Function to create fallback YouTube link when embed fails
+        function createYouTubeFallback(container, videoUrl, videoId) {
+            // Clear the container
+            container.innerHTML = '';
+
+            // Create fallback link with thumbnail
+            const fallbackDiv = document.createElement('div');
+            fallbackDiv.className = 'youtube-fallback';
+            fallbackDiv.innerHTML = `
+                <div class="youtube-thumbnail-container">
+                    <img src="https://img.youtube.com/vi/${videoId}/maxresdefault.jpg"
+                         alt="YouTube video thumbnail"
+                         class="youtube-thumbnail"
+                         onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'">
+                    <div class="youtube-play-overlay">
+                        <svg width="68" height="48" viewBox="0 0 68 48">
+                            <path d="M66.52,7.74c-0.78-2.93-2.49-5.41-5.42-6.19C55.79,.13,34,0,34,0S12.21,.13,6.9,1.55 C3.97,2.33,2.27,4.81,1.48,7.74C0.06,13.05,0,24,0,24s0.06,10.95,1.48,16.26c0.78,2.93,2.49,5.41,5.42,6.19 C12.21,47.87,34,48,34,48s21.79-0.13,27.1-1.55c2.93-0.78,4.64-3.26,5.42-6.19C67.94,34.95,68,24,68,24S67.94,13.05,66.52,7.74z" fill="#f00"></path>
+                            <path d="M 45,24 27,14 27,34" fill="#fff"></path>
+                        </svg>
+                    </div>
+                    <a href="${videoUrl}" target="_blank" rel="noopener noreferrer" class="youtube-fallback-link">
+                        Watch on YouTube
+                    </a>
+                </div>
+            `;
+
+            container.appendChild(fallbackDiv);
+        }
+
+        // Function to calculate reading time based on word count (English) and character count (Chinese)
+        function calculateReadingTime(text) {
+            if (!text || text.trim().length === 0) {
+                return '1 min read';
+            }
+
+            // Remove HTML tags and get plain text
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = text;
+            const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+            // Separate Chinese characters and English text
+            const chineseCharRegex = /[\u4e00-\u9fff]/g;
+            const chineseMatches = plainText.match(chineseCharRegex) || [];
+            const chineseCharCount = chineseMatches.length;
+
+            // Remove Chinese characters to count English words
+            const englishText = plainText.replace(chineseCharRegex, ' ');
+            const englishWords = englishText.trim().split(/\s+/).filter(word => word.length > 0 && /[a-zA-Z]/.test(word));
+            const englishWordCount = englishWords.length;
+
+            // Calculate reading time: English words / 250 + Chinese characters / 400
+            const englishReadingTime = englishWordCount / 250;
+            const chineseReadingTime = chineseCharCount / 400;
+            const totalReadingTime = englishReadingTime + chineseReadingTime;
+            const readingTimeMinutes = Math.ceil(totalReadingTime);
+
+            // Return formatted reading time (minimum 1 minute)
+            return `${Math.max(1, readingTimeMinutes)} min read`;
+        }
+
+        // Function to call Google Cloud Text-to-Speech API with text chunking for long content
+        async function synthesizeSpeech(text) {
+            // Detect language and choose appropriate voice
+            const useChinese = containsChinese(text);
+            console.log('Using Chinese voice:', useChinese);
+            const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+            console.log('Selected voice:', selectedVoice);
+
+            // Check text length to determine approach
+            const textBytes = new TextEncoder().encode(text).length;
+            console.log('Text length in bytes:', textBytes);
+
+            if (textBytes <= GOOGLE_CLOUD_TTS_CONFIG.maxTextBytes) {
+                console.log('Using single API call');
+                return await synthesizeShortAudio(text, selectedVoice);
+            } else {
+                console.log('Using chunked synthesis for long text');
+                return await synthesizeChunkedAudio(text, selectedVoice);
+            }
+        }
+
+        // Function for short audio synthesis (original API)
+        async function synthesizeShortAudio(text, voice) {
+            const requestBody = {
+                input: { text: text },
+                voice: voice,
+                audioConfig: GOOGLE_CLOUD_TTS_CONFIG.audioConfig
+            };
+
+            try {
+                const response = await fetch(`${GOOGLE_CLOUD_TTS_CONFIG.endpoint}?key=${GOOGLE_CLOUD_TTS_CONFIG.apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Google Cloud TTS API error: ${errorData.error?.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.audioContent;
+            } catch (error) {
+                console.error('Short audio synthesis failed:', error);
+                throw error;
+            }
+        }
+
+        // Function for chunked audio synthesis (splits long text into smaller parts)
+        async function synthesizeChunkedAudio(text, voice) {
+            console.log('Starting streaming chunked synthesis for long text');
+
+            // Split text into chunks with progressive sizes for faster first playback
+            // First chunk: 1000 bytes, second: 2000 bytes, rest: maxTextBytes (4000)
+            const chunks = splitTextIntoChunksProgressive(text, [1000, 2000, GOOGLE_CLOUD_TTS_CONFIG.maxTextBytes]);
+
+            // Log chunk breakdown
+            console.log(`%c📦 Audio Chunks: ${chunks.length} total`, 'font-weight: bold');
+            chunks.forEach((chunk, i) => {
+                const bytes = new TextEncoder().encode(chunk).length;
+                console.log(`   Chunk ${i + 1}: ${bytes.toLocaleString()} bytes`);
+            });
+
+            // Synthesize first chunk immediately
+            // Replace periods with Chinese periods for better TTS pauses
+            const firstChunkText = chunks[0].replace(/\./g, '。');
+            const firstChunkBytes = new TextEncoder().encode(firstChunkText).length;
+            console.log(`%c▶️ Processing chunk 1/${chunks.length}`, 'color: #4CAF50', `(${firstChunkBytes.toLocaleString()} bytes)`);
+            const startTime = performance.now();
+            const firstChunk = await synthesizeShortAudio(firstChunkText, voice);
+            const elapsed = (performance.now() - startTime).toFixed(0);
+            console.log(`%c✓ Chunk 1 ready`, 'color: #4CAF50', `${elapsed}ms`);
+
+            // Create streaming audio result with first chunk and background processing
+            const streamingResult = {
+                firstChunk: firstChunk,
+                totalChunks: chunks.length,
+                currentChunkIndex: 0,
+                chunks: chunks,
+                voice: voice,
+                audioQueue: [],
+                isProcessing: true
+            };
+
+            // Process remaining chunks in background if there are more
+            if (chunks.length > 1) {
+                processRemainingChunks(streamingResult, chunks.slice(1), voice);
+            } else {
+                streamingResult.isProcessing = false;
+            }
+
+            return streamingResult;
+        }
+
+        // Background processing of remaining chunks
+        async function processRemainingChunks(streamingResult, remainingChunks, voice) {
+            const totalStart = performance.now();
+
+            for (let i = 0; i < remainingChunks.length; i++) {
+                const chunkIndex = i + 1; // +1 because first chunk is already processed
+                const chunkNum = chunkIndex + 1;
+                const chunkBytes = new TextEncoder().encode(remainingChunks[i]).length;
+                console.log(`%c▶️ Processing chunk ${chunkNum}/${streamingResult.totalChunks}`, 'color: #2196F3', `(${chunkBytes.toLocaleString()} bytes)`);
+
+                try {
+                    const startTime = performance.now();
+                    // Replace periods with Chinese periods for better TTS pauses
+                    const chunkText = remainingChunks[i].replace(/\./g, '。');
+                    const audioContent = await synthesizeShortAudio(chunkText, voice);
+                    const elapsed = (performance.now() - startTime).toFixed(0);
+
+                    streamingResult.audioQueue.push({
+                        index: chunkIndex,
+                        audioContent: audioContent,
+                        text: remainingChunks[i]
+                    });
+
+                    console.log(`%c✓ Chunk ${chunkNum} ready`, 'color: #2196F3', `${elapsed}ms`);
+
+                    // Small delay between requests to avoid rate limiting
+                    if (i < remainingChunks.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                } catch (error) {
+                    console.error(`%c✗ Chunk ${chunkNum} failed:`, 'color: #f44336', error.message);
+                    // Continue processing other chunks even if one fails
+                }
+            }
+
+            const totalElapsed = ((performance.now() - totalStart) / 1000).toFixed(1);
+            streamingResult.isProcessing = false;
+            console.log(`%c🎵 All ${streamingResult.totalChunks} chunks ready`, 'font-weight: bold; color: #4CAF50', `(total: ${totalElapsed}s)`);
+        }
+
+        // Function to split text into chunks with progressive byte limits
+        // chunkSizes: array of max bytes for each chunk [first, second, ...rest]
+        function splitTextIntoChunksProgressive(text, chunkSizes) {
+            const chunks = [];
+            const sentences = text.split(/[.!?。！？]\s+/);
+            let currentChunk = '';
+            let chunkIndex = 0;
+
+            function getMaxBytes() {
+                // Use the last size for all chunks beyond the specified sizes
+                return chunkSizes[Math.min(chunkIndex, chunkSizes.length - 1)];
+            }
+
+            for (const sentence of sentences) {
+                const maxBytes = getMaxBytes();
+                const testChunk = currentChunk + (currentChunk ? '. ' : '') + sentence;
+                const testBytes = new TextEncoder().encode(testChunk).length;
+
+                if (testBytes <= maxBytes) {
+                    currentChunk = testChunk;
+                } else {
+                    // If current chunk has content, save it and start new chunk
+                    if (currentChunk) {
+                        chunks.push(currentChunk + '.');
+                        chunkIndex++;
+                        currentChunk = sentence;
+                    } else {
+                        // Single sentence is too long, split by words
+                        const words = sentence.split(' ');
+                        let wordChunk = '';
+
+                        for (const word of words) {
+                            const currentMaxBytes = getMaxBytes();
+                            const testWordChunk = wordChunk + (wordChunk ? ' ' : '') + word;
+                            const testWordBytes = new TextEncoder().encode(testWordChunk).length;
+
+                            if (testWordBytes <= currentMaxBytes) {
+                                wordChunk = testWordChunk;
+                            } else {
+                                if (wordChunk) {
+                                    chunks.push(wordChunk);
+                                    chunkIndex++;
+                                    wordChunk = word;
+                                } else {
+                                    // Single word is too long, truncate it
+                                    chunks.push(word.substring(0, currentMaxBytes / 4)); // Rough estimate
+                                    chunkIndex++;
+                                    wordChunk = '';
+                                }
+                            }
+                        }
+
+                        if (wordChunk) {
+                            currentChunk = wordChunk;
+                        }
+                    }
+                }
+            }
+
+            // Add the last chunk if it has content
+            if (currentChunk) {
+                chunks.push(currentChunk + '.');
+            }
+
+            return chunks.filter(chunk => chunk.trim().length > 0);
+        }
+
+        // Audio queue manager for streaming playback
+        class AudioQueueManager {
+            constructor(streamingResult, button, contentDiv) {
+                this.streamingResult = streamingResult;
+                this.button = button;
+                this.contentDiv = contentDiv;
+                this.currentAudio = null;
+                this.currentChunkIndex = 0;
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.isDestroyed = false;
+                this.chunkStartTime = null;
+                this.totalPlayTime = 0;
+                this.lastSegmentIndex = -1;
+
+                // Calculate character ranges for each chunk for text tracking
+                this.chunkCharRanges = this.calculateChunkCharRanges();
+            }
+
+            // Calculate character start/end positions for each audio chunk
+            calculateChunkCharRanges() {
+                const ranges = [];
+                let charOffset = 0;
+
+                for (let i = 0; i < this.streamingResult.chunks.length; i++) {
+                    const chunkText = this.streamingResult.chunks[i];
+                    const charLength = chunkText.length;
+                    ranges.push({
+                        start: charOffset,
+                        end: charOffset + charLength
+                    });
+                    charOffset += charLength;
+                }
+
+                return ranges;
+            }
+
+            // Set up text tracking for current audio
+            setupTextTracking(audio) {
+                if (!this.contentDiv || !this.contentDiv._totalChars) return;
+
+                const chunkRange = this.chunkCharRanges[this.currentChunkIndex];
+                if (!chunkRange) return;
+
+                audio.ontimeupdate = () => {
+                    if (this.isDestroyed || !audio.duration) return;
+
+                    // Calculate position within this chunk
+                    const chunkProgress = audio.currentTime / audio.duration;
+                    const chunkCharLength = chunkRange.end - chunkRange.start;
+                    const charPosInChunk = Math.floor(chunkProgress * chunkCharLength);
+                    const globalCharPos = chunkRange.start + charPosInChunk;
+
+                    const segmentIndex = findSegmentByCharPosition(this.contentDiv, globalCharPos);
+                    if (segmentIndex !== this.lastSegmentIndex) {
+                        this.lastSegmentIndex = segmentIndex;
+                        highlightSegment(this.contentDiv, segmentIndex);
+                    }
+                };
+            }
+
+            async playFirstChunk() {
+                if (this.isDestroyed) return;
+
+                const chunkBytes = new TextEncoder().encode(this.streamingResult.chunks[0]).length;
+                console.log(`%c🔊 Playing chunk 1/${this.streamingResult.totalChunks}`, 'color: #9C27B0', `(${chunkBytes.toLocaleString()} bytes)`);
+                this.chunkStartTime = performance.now();
+                const audio = new Audio();
+                audio.src = `data:audio/mp3;base64,${this.streamingResult.firstChunk}`;
+                audio.playbackRate = window.currentPlaybackSpeed || 1.0;
+
+                this.currentAudio = audio;
+                this.currentChunkIndex = 0;
+
+                // Set up event handlers
+                audio.onended = () => this.onChunkEnded();
+                audio.onerror = () => this.onAudioError();
+
+                // Set up text tracking
+                this.setupTextTracking(audio);
+
+                await audio.play();
+                this.isPlaying = true;
+                this.isPaused = false;
+            }
+
+            async onChunkEnded() {
+                if (this.isDestroyed) return;
+
+                const playDuration = ((performance.now() - this.chunkStartTime) / 1000).toFixed(1);
+                this.totalPlayTime += parseFloat(playDuration);
+                console.log(`%c⏹ Chunk ${this.currentChunkIndex + 1} ended`, 'color: #607D8B', `(played ${playDuration}s)`);
+
+                // Check if there are more chunks to play
+                if (this.currentChunkIndex + 1 < this.streamingResult.totalChunks) {
+                    await this.playNextChunk();
+                } else {
+                    // All chunks finished
+                    console.log('All chunks finished playing');
+                    this.onAllChunksFinished();
+                }
+            }
+
+            async playNextChunk() {
+                if (this.isDestroyed) return;
+
+                const nextChunkIndex = this.currentChunkIndex + 1;
+
+                // Find the next chunk in the queue
+                const nextChunk = this.streamingResult.audioQueue.find(chunk => chunk.index === nextChunkIndex);
+
+                if (nextChunk) {
+                    const chunkBytes = new TextEncoder().encode(nextChunk.text).length;
+                    console.log(`%c🔊 Playing chunk ${nextChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #9C27B0', `(${chunkBytes.toLocaleString()} bytes)`);
+                    this.chunkStartTime = performance.now();
+                    const audio = new Audio();
+                    audio.src = `data:audio/mp3;base64,${nextChunk.audioContent}`;
+                    audio.playbackRate = window.currentPlaybackSpeed || 1.0;
+
+                    this.currentAudio = audio;
+                    this.currentChunkIndex = nextChunkIndex;
+
+                    audio.onended = () => this.onChunkEnded();
+                    audio.onerror = () => this.onAudioError();
+
+                    // Set up text tracking for this chunk
+                    this.setupTextTracking(audio);
+
+                    await audio.play();
+                } else {
+                    // Chunk not ready yet, wait and retry
+                    console.log(`%c⏳ Chunk ${nextChunkIndex + 1} not ready, waiting...`, 'color: #FF9800');
+                    setTimeout(() => this.playNextChunk(), 500);
+                }
+            }
+
+            pause() {
+                if (this.currentAudio && this.isPlaying) {
+                    this.currentAudio.pause();
+                    this.isPlaying = false;
+                    this.isPaused = true;
+                    console.log(`%c⏸ Paused at chunk ${this.currentChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #FF9800');
+                }
+            }
+
+            async resume() {
+                if (this.currentAudio && this.isPaused) {
+                    await this.currentAudio.play();
+                    this.isPlaying = true;
+                    this.isPaused = false;
+                    console.log(`%c▶️ Resumed chunk ${this.currentChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #4CAF50');
+                }
+            }
+
+            stop() {
+                if (this.currentAudio) {
+                    this.currentAudio.pause();
+                    this.currentAudio.currentTime = 0;
+                }
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.isDestroyed = true;
+                // Clear text tracking highlights
+                clearTextTracking(this.contentDiv);
+                console.log(`%c⏹ Audio stopped`, 'color: #f44336');
+            }
+
+            onAudioError() {
+                console.error(`%c✗ Audio error in chunk ${this.currentChunkIndex + 1}`, 'color: #f44336');
+                this.onAllChunksFinished();
+            }
+
+            onAllChunksFinished() {
+                console.log(`%c🎵 Playback complete (${this.streamingResult.totalChunks} chunks)`, 'font-weight: bold; color: #4CAF50', `(total: ${this.totalPlayTime.toFixed(1)}s)`);
+                // Clear text tracking highlights
+                clearTextTracking(this.contentDiv);
+                resetButton(this.button);
+                this.isDestroyed = true;
+                updateFloatingMarkState();
+                // Auto mark as read when audio finishes
+                autoMarkPostAsRead(this.button);
+                // Auto play next post if continuous play is enabled
+                autoContinuousPlay(this.button);
+            }
+        }
+
+        function stopAllOtherAudio(currentButton) {
+            // Find all listen buttons and stop their audio
+            const allListenButtons = document.querySelectorAll('.listen-btn');
+            allListenButtons.forEach(button => {
+                if (button !== currentButton && button.speechState && (button.speechState.isPlaying || button.speechState.isPaused)) {
+                    // Clear text tracking for this button's content
+                    if (button.speechState.contentDiv) {
+                        clearTextTracking(button.speechState.contentDiv);
+                    }
+                    // Stop streaming audio if present
+                    if (button.speechState.audioQueueManager) {
+                        button.speechState.audioQueueManager.stop();
+                    }
+                    // Stop single audio if present
+                    if (button.speechState.audio) {
+                        button.speechState.audio.pause();
+                        button.speechState.audio.currentTime = 0;
+                    }
+                    resetButton(button);
+                }
+            });
+        }
+
+        function resetButton(button) {
+            if (button.speechState) {
+                // Clear text tracking highlights
+                if (button.speechState.contentDiv) {
+                    clearTextTracking(button.speechState.contentDiv);
+                    button.speechState.contentDiv = null;
+                }
+                // Clean up streaming audio if present
+                if (button.speechState.audioQueueManager) {
+                    button.speechState.audioQueueManager.stop();
+                    button.speechState.audioQueueManager = null;
+                }
+                // Clean up single audio if present
+                if (button.speechState.audio) {
+                    button.speechState.audio.pause();
+                    button.speechState.audio.currentTime = 0;
+                    button.speechState.audio = null;
+                }
+                button.speechState.isPlaying = false;
+                button.speechState.isPaused = false;
+            }
+            button.classList.remove('playing', 'loading', 'paused');
+            button.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                </svg>
+            `;
+        }
+
+        // Online/offline event listeners
+        function setupOfflineSupport() {
+            // Update online status
+            window.addEventListener('online', function() {
+                isOnline = true;
+                console.log('Back online - processing queued actions');
+                showSyncNotification('Back online! Syncing...');
+                setTimeout(processOfflineQueue, 1000); // Small delay to ensure connection is stable
+            });
+
+            window.addEventListener('offline', function() {
+                isOnline = false;
+                console.log('Gone offline - actions will be queued');
+                // Only show offline notification if there are pending tasks
+                if (offlineQueue.length > 0) {
+                    showOfflineNotification('You\'re offline. Actions will be saved and synced later.');
+                }
+            });
+
+            // Process any existing queue on page load if online
+            if (isOnline && offlineQueue.length > 0) {
+                console.log('Found queued actions from previous session');
+                setTimeout(processOfflineQueue, 2000); // Delay to let page fully load
+            }
+
+            // Show offline indicator if currently offline and there are pending tasks
+            if (!isOnline && offlineQueue.length > 0) {
+                showOfflineNotification('You\'re currently offline. Actions will be saved and synced later.');
+            }
+        }
+
+        // Hamburger menu functionality
+        function setupHamburgerMenu() {
+            const headerMenuBtn = document.getElementById('header-menu');
+            const menuOverlay = document.getElementById('menu-overlay');
+            const menuSidebar = document.getElementById('menu-sidebar');
+            const menuClose = document.getElementById('menu-close');
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeToggleItem = document.getElementById('theme-toggle-item');
+            const syncMenuItem = document.getElementById('sync-menu-item');
+            const apiKeyMenuItem = document.getElementById('api-key-menu-item');
+            const webhookMenuItem = document.getElementById('webhook-menu-item');
+            const datasourceMenuItem = document.getElementById('datasource-menu-item');
+
+            // Load saved theme - default to dark
+            const savedTheme = localStorage.getItem('learner_theme') || 'dark';
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                themeToggle.classList.add('dark');
+            }
+
+            // Menu controls
+            const openMenu = () => { menuOverlay.classList.add('active'); menuSidebar.classList.add('active'); };
+            const closeMenu = () => { menuOverlay.classList.remove('active'); menuSidebar.classList.remove('active'); };
+
+            headerMenuBtn.addEventListener('click', openMenu);
+            menuClose.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Theme toggle
+            themeToggleItem.addEventListener('click', () => {
+                const isDark = document.body.classList.contains('dark-mode');
+                document.body.classList.toggle('dark-mode', !isDark);
+                themeToggle.classList.toggle('dark', !isDark);
+                localStorage.setItem('learner_theme', isDark ? 'light' : 'dark');
+            });
+
+            // Sync functionality
+            syncMenuItem.addEventListener('click', () => {
+                Object.assign(syncMenuItem.style, { opacity: '0.6', pointerEvents: 'none' });
+                closeMenu();
+                setTimeout(() => window.location.reload(), 200);
+            });
+
+            // API Key configuration
+            apiKeyMenuItem.addEventListener('click', () => {
+                closeMenu();
+                showApiKeyModal();
+            });
+
+            // Webhook configuration
+            webhookMenuItem.addEventListener('click', () => {
+                closeMenu();
+                showWebhookModal();
+            });
+
+            // Data Source configuration
+            datasourceMenuItem.addEventListener('click', () => {
+                closeMenu();
+                showDataSourceModal();
+            });
+
+            // Font size controls
+            const fontSizeDecrease = document.getElementById('font-size-decrease');
+            const fontSizeIncrease = document.getElementById('font-size-increase');
+            const fontSizeDisplay = document.getElementById('font-size-display');
+
+            // Load saved font scale - default to 1
+            let fontScale = parseFloat(localStorage.getItem('learner_font_scale')) || 1;
+            updateFontScale(fontScale);
+
+            function updateFontScale(scale) {
+                fontScale = Math.max(0.8, Math.min(1.5, scale)); // Limit between 80% and 150%
+                document.documentElement.style.setProperty('--font-scale', fontScale);
+                fontSizeDisplay.textContent = Math.round(fontScale * 100) + '%';
+                localStorage.setItem('learner_font_scale', fontScale);
+            }
+
+            fontSizeDecrease.addEventListener('click', () => updateFontScale(fontScale - 0.1));
+            fontSizeIncrease.addEventListener('click', () => updateFontScale(fontScale + 0.1));
+
+            // Playback speed controls
+            const playbackSpeedDecrease = document.getElementById('playback-speed-decrease');
+            const playbackSpeedIncrease = document.getElementById('playback-speed-increase');
+            const playbackSpeedDisplay = document.getElementById('playback-speed-display');
+
+            // Playback speed options: 1.0, 1.25, 1.5, 2.0
+            const playbackSpeeds = [1.0, 1.25, 1.5, 2.0];
+            let currentSpeedIndex = parseInt(localStorage.getItem('learner_playback_speed_index')) || 0;
+            updatePlaybackSpeed(currentSpeedIndex);
+
+            function updatePlaybackSpeed(speedIndex) {
+                currentSpeedIndex = Math.max(0, Math.min(playbackSpeeds.length - 1, speedIndex));
+                const speed = playbackSpeeds[currentSpeedIndex];
+                playbackSpeedDisplay.textContent = speed + 'x';
+                localStorage.setItem('learner_playback_speed_index', currentSpeedIndex);
+
+                // Update global playback speed variable for audio elements
+                window.currentPlaybackSpeed = speed;
+            }
+
+            playbackSpeedDecrease.addEventListener('click', () => updatePlaybackSpeed(currentSpeedIndex - 1));
+            playbackSpeedIncrease.addEventListener('click', () => updatePlaybackSpeed(currentSpeedIndex + 1));
+
+            // Auto Mark Read toggle
+            const autoMarkReadToggle = document.getElementById('auto-mark-read-toggle');
+            const autoMarkReadItem = document.getElementById('auto-mark-read-item');
+
+            // Load saved setting - default to true (on)
+            window.autoMarkReadEnabled = localStorage.getItem('learner_auto_mark_read') !== 'false';
+            if (window.autoMarkReadEnabled) {
+                autoMarkReadToggle.classList.add('dark');
+            }
+
+            autoMarkReadItem.addEventListener('click', () => {
+                window.autoMarkReadEnabled = !window.autoMarkReadEnabled;
+                autoMarkReadToggle.classList.toggle('dark', window.autoMarkReadEnabled);
+                localStorage.setItem('learner_auto_mark_read', window.autoMarkReadEnabled);
+            });
+
+            // Continuous Play toggle
+            const continuousPlayToggle = document.getElementById('continuous-play-toggle');
+            const continuousPlayItem = document.getElementById('continuous-play-item');
+
+            // Load saved setting - default to false (off)
+            window.continuousPlayEnabled = localStorage.getItem('learner_continuous_play') === 'true';
+            if (window.continuousPlayEnabled) {
+                continuousPlayToggle.classList.add('dark');
+            }
+
+            continuousPlayItem.addEventListener('click', () => {
+                window.continuousPlayEnabled = !window.continuousPlayEnabled;
+                continuousPlayToggle.classList.toggle('dark', window.continuousPlayEnabled);
+                localStorage.setItem('learner_continuous_play', window.continuousPlayEnabled);
+            });
+        }
+
+        // API Key Status Functions
+        function updateApiKeyStatus() {
+            const statusIndicator = document.getElementById('api-key-status');
+            const apiKey = localStorage.getItem('googleCloudTTSApiKey');
+
+            if (apiKey && apiKey.trim()) {
+                statusIndicator.classList.add('configured');
+                statusIndicator.title = 'API Key configured';
+            } else {
+                statusIndicator.classList.remove('configured');
+                statusIndicator.title = 'API Key not configured';
+            }
+        }
+
+        // API Key Modal Functions
+        function showApiKeyModal() {
+            const modal = document.getElementById('api-key-modal');
+            const input = document.getElementById('api-key-input');
+
+            // Pre-fill with existing API key if available
+            const existingKey = localStorage.getItem('googleCloudTTSApiKey') || '';
+            input.value = existingKey;
+
+            modal.classList.add('show');
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function hideApiKeyModal() {
+            const modal = document.getElementById('api-key-modal');
+            modal.classList.remove('show');
+        }
+
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const apiKey = input.value.trim();
+
+            if (!apiKey) {
+                alert('Please enter a valid API key');
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('googleCloudTTSApiKey', apiKey);
+
+            // Update the config object
+            GOOGLE_CLOUD_TTS_CONFIG.apiKey = apiKey;
+
+            hideApiKeyModal();
+
+            // Update status indicator
+            updateApiKeyStatus();
+
+            // Show success message
+            alert('API key saved successfully! You can now use text-to-speech functionality.');
+        }
+
+        function setupApiKeyModal() {
+            const modal = document.getElementById('api-key-modal');
+            const closeBtn = document.getElementById('api-key-modal-close');
+            const cancelBtn = document.getElementById('api-key-cancel');
+            const form = document.getElementById('api-key-form');
+
+            // Close modal events
+            closeBtn.addEventListener('click', hideApiKeyModal);
+            cancelBtn.addEventListener('click', hideApiKeyModal);
+
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideApiKeyModal();
+                }
+            });
+
+            // Handle form submission
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveApiKey();
+            });
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('show')) {
+                    hideApiKeyModal();
+                }
+            });
+        }
+
+        function setupWebhookModal() {
+            const modal = document.getElementById('webhook-modal');
+            const closeBtn = document.getElementById('webhook-modal-close');
+            const cancelBtn = document.getElementById('webhook-cancel');
+            const form = document.getElementById('webhook-form');
+            const input = document.getElementById('webhook-input');
+
+            function showModal() {
+                // Pre-fill with existing URL if available
+                const existingUrl = localStorage.getItem('learner_webhook_base_url') || '';
+                input.value = existingUrl;
+                modal.classList.add('show');
+                setTimeout(() => input.focus(), 100);
+            }
+
+            function hideModal() {
+                modal.classList.remove('show');
+            }
+
+            function saveWebhookUrl() {
+                let url = input.value.trim();
+                // If empty, clear it
+                if (!url) {
+                    localStorage.removeItem('learner_webhook_base_url');
+                    hideModal();
+                    updateWebhookStatus();
+                    return;
+                }
+
+                if (!url.startsWith('http')) {
+                    alert('Please enter a valid URL (starting with http:// or https://)');
+                    return;
+                }
+
+                // Ensure URL ends with slash
+                if (!url.endsWith('/')) {
+                    url += '/';
+                }
+
+                localStorage.setItem('learner_webhook_base_url', url);
+                hideModal();
+                updateWebhookStatus();
+                alert('Webhook URL saved successfully!');
+            }
+
+            // Expose show function for menu click
+            window.showWebhookModal = showModal;
+
+            // Event listeners
+            closeBtn.addEventListener('click', hideModal);
+            cancelBtn.addEventListener('click', hideModal);
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) hideModal();
+            });
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveWebhookUrl();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('show')) {
+                    hideModal();
+                }
+            });
+        }
+
+        function updateWebhookStatus() {
+            const statusIndicator = document.getElementById('webhook-status');
+            const url = localStorage.getItem('learner_webhook_base_url');
+
+            if (url && url.trim()) {
+                statusIndicator.classList.add('configured');
+                statusIndicator.title = 'Webhook URL configured';
+            } else {
+                statusIndicator.classList.remove('configured');
+                statusIndicator.title = 'Webhook URL not configured';
+            }
+        }
+
+        function setupDataSourceModal() {
+            const modal = document.getElementById('datasource-modal');
+            const closeBtn = document.getElementById('datasource-modal-close');
+            const cancelBtn = document.getElementById('datasource-cancel');
+            const form = document.getElementById('datasource-form');
+            const sheetIdInput = document.getElementById('sheet-id-input');
+            const videosGidInput = document.getElementById('videos-gid-input');
+            const notesGidInput = document.getElementById('notes-gid-input');
+
+            function showModal() {
+                // Pre-fill with existing values
+                sheetIdInput.value = localStorage.getItem('learner_sheet_id') || '';
+                videosGidInput.value = localStorage.getItem('learner_videos_gid') || '';
+                notesGidInput.value = localStorage.getItem('learner_notes_gid') || '';
+
+                modal.classList.add('show');
+                setTimeout(() => sheetIdInput.focus(), 100);
+            }
+
+            function hideModal() {
+                modal.classList.remove('show');
+            }
+
+            function saveDataSource() {
+                const sheetId = sheetIdInput.value.trim();
+                const videosGid = videosGidInput.value.trim();
+                const notesGid = notesGidInput.value.trim();
+
+                if (!sheetId || !videosGid || !notesGid) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+
+                localStorage.setItem('learner_sheet_id', sheetId);
+                localStorage.setItem('learner_videos_gid', videosGid);
+                localStorage.setItem('learner_notes_gid', notesGid);
+
+                hideModal();
+                updateDataSourceStatus();
+
+                if (confirm('Data source saved. Reload page now to apply changes?')) {
+                    window.location.reload();
+                }
+            }
+
+            // Expose show function for menu click
+            window.showDataSourceModal = showModal;
+
+            // Event listeners
+            closeBtn.addEventListener('click', hideModal);
+            cancelBtn.addEventListener('click', hideModal);
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) hideModal();
+            });
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveDataSource();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('show')) {
+                    hideModal();
+                }
+            });
+        }
+
+        function updateDataSourceStatus() {
+            const statusIndicator = document.getElementById('datasource-status');
+            const sheetId = localStorage.getItem('learner_sheet_id');
+
+            if (sheetId) {
+                statusIndicator.classList.add('configured');
+                statusIndicator.title = 'Custom Data Source configured';
+            } else {
+                statusIndicator.classList.remove('configured');
+                statusIndicator.title = 'Using Default Data Source';
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const input = document.getElementById(elementId);
+            if (!input || !input.value) return;
+
+            navigator.clipboard.writeText(input.value).then(() => {
+                // Find the button next to the input
+                const btn = input.nextElementSibling;
+                if (btn && btn.classList.contains('copy-btn')) {
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="green">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    `;
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                    }, 2000);
+                }
+            });
+        }
+
+        // Load posts when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize global playback speed
+            const playbackSpeeds = [1.0, 1.25, 1.5, 2.0];
+            const savedSpeedIndex = parseInt(localStorage.getItem('learner_playback_speed_index')) || 0;
+            window.currentPlaybackSpeed = playbackSpeeds[savedSpeedIndex] || 1.0;
+
+            setupOfflineSupport();
+            setupHeaderAudioButton();
+            loadPosts().then(() => {
+                setupSearch();
+                setupCollapseAll();
+                setupTextHighlighting();
+                setupHeaderTitleUpdate();
+                setupHamburgerMenu();
+                setupApiKeyModal();
+                updateApiKeyStatus();
+                setupWebhookModal();
+                updateWebhookStatus();
+                setupDataSourceModal();
+                updateDataSourceStatus();
+                setupBottomTabs();
+                setupBottomTabsScrollBehavior();
+                setupFloatingNav();
+            });
+        });
+
+        // Setup header audio button click handler
+        function setupHeaderAudioButton() {
+            const headerBtn = document.getElementById('header-audio-btn');
+            if (!headerBtn) return;
+
+            headerBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+
+                // Get the active listen button reference
+                const activeListenBtn = headerBtn._activeListenButton;
+                if (activeListenBtn) {
+                    // Trigger the same toggle as clicking the listen button
+                    toggleSpeech(activeListenBtn);
+                }
+            });
+        }
+
+        // Bottom Tab Navigation Setup
+        function setupBottomTabs() {
+            const tabItems = document.querySelectorAll('.tab-item');
+
+            tabItems.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Get tab type
+                    const tabType = tab.dataset.tab;
+
+                    // Check if clicking on already active tab
+                    const isAlreadyActive = tab.classList.contains('active');
+
+                    if (isAlreadyActive) {
+                        // Scroll to top if clicking on active tab
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                        refreshTab(tabType);
+                        return;
+                    }
+
+                    // Remove active class from all tabs
+                    tabItems.forEach(t => t.classList.remove('active'));
+
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+
+                    // Handle tab switching logic
+                    handleTabSwitch(tabType);
+                });
+            });
+        }
+
+        // Bottom Tabs Scroll Behavior
+        function setupBottomTabsScrollBehavior() {
+            const bottomTabs = document.querySelector('.bottom-tabs');
+            let lastScrollTop = 0;
+            let scrollTimeout;
+            let lastScrollDirection = null;
+            const scrollThreshold = 5; // Minimum pixels to consider as intentional scroll
+
+            window.addEventListener('scroll', () => {
+                const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollDifference = Math.abs(currentScrollTop - lastScrollTop);
+
+                // Clear existing timeout
+                clearTimeout(scrollTimeout);
+
+                // Only process scroll if it's above threshold (prevents jitter)
+                if (scrollDifference > scrollThreshold) {
+                    // Determine scroll direction
+                    if (currentScrollTop > lastScrollTop && currentScrollTop > 100) {
+                        // Scrolling down - hide tabs
+                        bottomTabs.classList.add('hidden');
+                        lastScrollDirection = 'down';
+                    } else if (currentScrollTop < lastScrollTop) {
+                        // Scrolling up - show tabs
+                        bottomTabs.classList.remove('hidden');
+                        lastScrollDirection = 'up';
+                    }
+
+                    lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
+                }
+
+                // Only show tabs after scroll stops if:
+                // 1. User was scrolling up, OR
+                // 2. User is near the top of the page
+                scrollTimeout = setTimeout(() => {
+                    if (lastScrollDirection === 'up' || currentScrollTop < 200) {
+                        bottomTabs.classList.remove('hidden');
+                    }
+                }, 1000);
+            }, { passive: true });
+        }
+
+        async function handleTabSwitch(tabType) {
+            // Don't switch if already on the same tab
+            if (currentTab === tabType) return;
+
+            console.log('Switched to tab:', tabType);
+
+            // Update current tab
+            currentTab = tabType;
+
+            // Update tab button states
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabType}`).classList.add('active');
+
+            // Hide all tab content containers
+            document.querySelectorAll('.tab-content').forEach(container => {
+                container.style.display = 'none';
+            });
+
+            // Show the selected tab container
+            const targetContainer = document.getElementById(`${tabType}-container`);
+            targetContainer.style.display = 'block';
+
+            // Load content for the tab if not already loaded
+            await renderTabContent(tabType);
+
+            // Reset header title when switching tabs
+            resetHeaderTitle();
+
+            // Update search functionality to work with current tab
+            updateSearchForCurrentTab();
+        }
+
+        async function refreshTab(tabType) {
+            console.log('Refreshing tab:', tabType);
+            if (!isOnline) {
+                console.warn('Offline - skipping refresh');
+                showOfflineNotification('You\'re offline. Showing cached content.');
+                showSyncNotification('Failed');
+                return;
+            }
+
+            cachedData[tabType] = null;
+
+            const container = document.getElementById(`${tabType}-container`);
+            const previousContent = container ? container.innerHTML : '';
+
+            try {
+                await loadTabData(tabType);
+
+                const noPostsElement = document.getElementById('no-posts');
+                if (noPostsElement) {
+                    noPostsElement.style.display = 'none';
+                }
+
+                if (container) {
+                    container.innerHTML = '';
+                }
+
+                await renderTabContent(tabType);
+
+                if (currentTab === tabType) {
+                    resetHeaderTitle();
+                    applyCurrentSearchFilter();
+                    showSyncNotification('Synced');
+                }
+            } catch (error) {
+                console.error(`Error refreshing ${tabType}:`, error);
+                if (container && previousContent !== undefined) {
+                    container.innerHTML = previousContent;
+                }
+                showSyncNotification('Failed');
+            }
+        }
+
+        function updateSearchForCurrentTab() {
+            const searchBar = document.getElementById('search-bar');
+            if (searchBar) {
+                // Clear current search and re-setup for current tab
+                searchBar.value = '';
+                // Trigger search setup for current container
+                const event = new Event('input');
+                searchBar.dispatchEvent(event);
+            }
+        }
+
+    </script>
+
+    <!-- Bottom Tab Navigation -->
+    <div class="bottom-tabs">
+        <button class="tab-item active" id="tab-videos" data-tab="videos">
+            <svg class="tab-icon" viewBox="0 0 24 24">
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+            <span class="tab-label">Videos</span>
+        </button>
+        <button class="tab-item" id="tab-notes" data-tab="notes">
+            <svg class="tab-icon" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10,9 9,9 8,9"></polyline>
+            </svg>
+            <span class="tab-label">Notes</span>
+        </button>
+    </div>
+</body>
+</html>

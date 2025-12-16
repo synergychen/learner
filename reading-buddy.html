@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reading Buddy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka:wght@400;600&display=swap"
+    rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Fredoka', sans-serif;
+      background-color: #f0f9ff;
+      background-image: radial-gradient(#bae6fd 2px, transparent 2px);
+      background-size: 30px 30px;
+      touch-action: manipulation;
+    }
+
+    .word-span {
+      display: inline-block;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin: 3px;
+      border-radius: 12px;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+      /* Prevent layout shift on hover */
+    }
+
+    .word-span:hover {
+      background-color: #e0f2fe;
+      transform: scale(1.1);
+      border-color: #bae6fd;
+    }
+
+    .word-span:active {
+      transform: scale(0.95);
+      background-color: #bae6fd;
+    }
+
+    /* Bold styling for specific words */
+    .is-bold {
+      font-weight: 700;
+      /* Extra bold */
+      color: #1e40af;
+      /* Slightly darker blue/black for emphasis */
+      background-color: rgba(255, 255, 255, 0.5);
+      /* Subtle highlight behind bold words */
+      border: 2px solid #bfdbfe;
+    }
+
+    .highlight-word {
+      background-color: #fde047 !important;
+      color: #854d0e !important;
+      transform: scale(1.1);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      border-color: #facc15 !important;
+    }
+
+    .card-shadow {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        transform: translateY(-100vh) rotate(0deg);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    .confetti {
+      position: fixed;
+      width: 15px;
+      height: 15px;
+      top: -20px;
+      z-index: 50;
+    }
+
+    .btn-press {
+      transition: transform 0.1s;
+    }
+
+    .btn-press:active {
+      transform: translateY(4px);
+    }
+
+    .progress-bar-fill {
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+  <!-- Header / Progress -->
+  <div
+    class="w-full max-w-2xl mb-6 flex items-center justify-between bg-white p-4 rounded-2xl card-shadow border-b-4 border-blue-200">
+    <div class="flex items-center gap-2 text-yellow-500">
+      <i data-lucide="star" class="w-8 h-8 fill-current"></i>
+      <span id="progress-text" class="text-2xl font-bold text-gray-700">1 / 40</span>
+    </div>
+    <div class="flex-1 mx-4 h-4 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+      <div id="progress-bar" class="h-full bg-green-400 progress-bar-fill w-[2.5%]"></div>
+    </div>
+    <button onclick="toggleSettings()" class="text-gray-400 hover:text-blue-500">
+      <i data-lucide="settings" class="w-6 h-6"></i>
+    </button>
+  </div>
+
+  <!-- Main Reading Card -->
+  <div
+    class="relative w-full max-w-2xl bg-white rounded-3xl card-shadow border-b-8 border-indigo-200 p-8 min-h-[300px] flex flex-col items-center justify-center text-center">
+
+    <!-- Sentence Display -->
+    <div id="sentence-container"
+      class="text-4xl md:text-5xl lg:text-5xl font-normal text-gray-600 leading-relaxed mb-8 select-none flex flex-wrap justify-center gap-2">
+      <!-- Words will be injected here -->
+    </div>
+
+    <!-- Speaker Button (Big) -->
+    <button onclick="speakSentence()"
+      class="btn-press group relative inline-flex items-center justify-center p-4 px-8 py-3 overflow-hidden font-medium text-indigo-600 transition duration-300 ease-out border-2 border-indigo-500 rounded-full shadow-md group">
+      <span
+        class="absolute inset-0 flex items-center justify-center w-full h-full text-white duration-300 -translate-x-full bg-indigo-500 group-hover:translate-x-0 ease">
+        <i data-lucide="volume-2" class="w-8 h-8"></i>
+      </span>
+      <span
+        class="absolute flex items-center justify-center w-full h-full text-indigo-500 transition-all duration-300 transform group-hover:translate-x-full ease text-xl">
+        <i data-lucide="volume-2" class="w-8 h-8 mr-2"></i> Listen
+      </span>
+      <span class="relative invisible">Listen Long Text</span>
+    </button>
+
+    <p class="mt-6 text-gray-400 text-sm">Tap bold words to practice them!</p>
+  </div>
+
+  <!-- Navigation Controls -->
+  <div class="w-full max-w-2xl mt-8 flex justify-between gap-4">
+    <button id="prev-btn" onclick="prevSentence()"
+      class="btn-press flex-1 bg-white border-b-4 border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      <i data-lucide="arrow-left" class="w-8 h-8"></i>
+      <span class="text-xl">Back</span>
+    </button>
+
+    <button id="next-btn" onclick="nextSentence()"
+      class="btn-press flex-1 bg-green-500 border-b-4 border-green-700 text-white hover:bg-green-400 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-lg">
+      <span class="text-xl">Next</span>
+      <i data-lucide="arrow-right" class="w-8 h-8"></i>
+    </button>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">Settings</h2>
+
+      <div class="mb-4">
+        <label class="block text-gray-700 mb-2">Voice Speed</label>
+        <input type="range" id="rate-slider" min="0.5" max="1.2" step="0.1" value="0.8"
+          class="w-full accent-indigo-500">
+        <div class="flex justify-between text-xs text-gray-500">
+          <span>Slow</span>
+          <span>Normal</span>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-gray-700 mb-2">Voice Pitch</label>
+        <input type="range" id="pitch-slider" min="0.5" max="1.5" step="0.1" value="1.1"
+          class="w-full accent-indigo-500">
+        <div class="flex justify-between text-xs text-gray-500">
+          <span>Deep</span>
+          <span>Squeaky</span>
+        </div>
+      </div>
+
+      <button onclick="toggleSettings()"
+        class="w-full bg-indigo-500 text-white py-2 rounded-xl font-bold mt-2">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // Sentences with *text* indicating bold sections
+    const rawSentences = [
+      "*The* sun is up.",
+      "*I* see a cat.",
+      "*You and me* run.",
+      "*We* go to the van.",
+      "*Can* you hop?",
+      "I am *at* the mat.",
+      "The bug is *on* me.",
+      "*It* is fun.",
+      "*Do* you see *a* dog?",
+      "I sit *as* I hum.",
+      "This is *for* you.",
+      "The sun is *yellow*.",
+      "The box is *blue*.",
+      "*Come here*.",
+      "I can hop *too*.",
+      "I see *two* red cups.",
+      "I have *one* big hat.",
+      "I *like* the pup.",
+      "The pig is *out*.",
+      "The bug is *in* the cup.",
+      "I sit *calm* as I *look*.",
+      "I *hear* a tap *here*.",
+      "The *little* cat is on me.",
+      "I can *come* to you.",
+      "The *hair* on the dog is big.",
+      "*I am* on a big mat, *and you can come here* to *see me*.",
+      "*We look at the yellow* sun *as it goes up in* the sky.",
+      "*The little* pup *is calm*, and *I like to sit as I pat it*.",
+      "*I hear* a tap *here*, and *I see* a bug hop *out on the* log.",
+      "*Two* kids *come to* play *in* a blue box, and *one* kid sits *at* the top.",
+      "*You and me* can run *to the little* hill *and* look *for* a red cap.",
+      "*I do hear the* cat, and *I see its hair on the* mat too.",
+      "*We see a yellow* van *at* the end, and *we come to* it as we walk.",
+      "*The* blue cup *is for you*, and *the yellow* cup *is for me*.",
+      "*I look at the little* dog *as* it goes *in and out* of the box.",
+      "*I come here* to sit *calm*, and *I am* happy to see *the little* sun set.",
+      "*One* cat *is in* the bag, and *two* cats are *on* the rug *too*.",
+      "*The little* kid *is in* a big hut, and *we look at* him *as* he hums.",
+      "*You can* hop *to* the blue rock *and see* a bug *on* it.",
+      "*I like to sit here* as *I look at* the red top spin on the mat."
+    ];
+
+    let currentIndex = 0;
+    const synth = window.speechSynthesis;
+    let voices = [];
+
+    // DOM Elements
+    const sentenceContainer = document.getElementById('sentence-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    // Initialize Icons
+    lucide.createIcons();
+
+    function loadVoices() {
+      voices = synth.getVoices();
+    }
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    // Parse sentence string into array of word objects: { text: "word", isBold: boolean }
+    function parseSentence(rawText) {
+      const segments = rawText.split('*');
+      let parsedWords = [];
+
+      segments.forEach((segment, index) => {
+        // If index is odd, it was inside *stars* (so it's bold)
+        // If index is even, it was outside *stars* (normal)
+        // Note: This logic assumes markers always come in pairs or start/end correctly.
+        const isBold = (index % 2 === 1);
+
+        // Trim extra spaces but keep structure reasonable
+        // We split by space to get individual words
+        const words = segment.split(' ').filter(w => w.length > 0);
+
+        words.forEach(word => {
+          parsedWords.push({
+            text: word,
+            isBold: isBold
+          });
+        });
+      });
+      return parsedWords;
+    }
+
+    function updateUI() {
+      const rawText = rawSentences[currentIndex];
+      const wordsData = parseSentence(rawText);
+
+      sentenceContainer.innerHTML = '';
+
+      wordsData.forEach(wordObj => {
+        const span = document.createElement('span');
+        span.textContent = wordObj.text;
+        span.className = 'word-span';
+        if (wordObj.isBold) {
+          span.classList.add('is-bold');
+        }
+
+        span.onclick = (e) => {
+          e.stopPropagation();
+          speakWord(wordObj.text, span);
+        };
+        sentenceContainer.appendChild(span);
+      });
+
+      // Update Progress
+      const progress = ((currentIndex + 1) / rawSentences.length) * 100;
+      progressBar.style.width = `${progress}%`;
+      progressText.textContent = `${currentIndex + 1} / ${rawSentences.length}`;
+
+      // Update Buttons
+      prevBtn.disabled = currentIndex === 0;
+      if (currentIndex === 0) prevBtn.classList.add('opacity-50');
+      else prevBtn.classList.remove('opacity-50');
+
+      if (currentIndex === rawSentences.length - 1) {
+        nextBtn.innerHTML = `<span class="text-xl">Finish!</span> <i data-lucide="party-popper" class="w-8 h-8"></i>`;
+        lucide.createIcons();
+      } else {
+        nextBtn.innerHTML = `<span class="text-xl">Next</span> <i data-lucide="arrow-right" class="w-8 h-8"></i>`;
+        lucide.createIcons();
+      }
+    }
+
+    function speakWord(text, element) {
+      synth.cancel();
+      const cleanText = text.replace(/[.,?]/g, '');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+
+      utterance.rate = document.getElementById('rate-slider').value;
+      utterance.pitch = document.getElementById('pitch-slider').value;
+
+      const preferredVoice = voices.find(v => v.name.includes('Google US English')) || voices.find(v => v.lang ===
+        'en-US');
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      if (element) {
+        document.querySelectorAll('.word-span').forEach(el => el.classList.remove('highlight-word'));
+        element.classList.add('highlight-word');
+        utterance.onend = () => {
+          element.classList.remove('highlight-word');
+        };
+      }
+      synth.speak(utterance);
+    }
+
+    function speakSentence() {
+      synth.cancel();
+      // Clean the raw sentence of * markers for speaking
+      const rawText = rawSentences[currentIndex];
+      const cleanText = rawText.replace(/\*/g, '');
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = document.getElementById('rate-slider').value;
+      utterance.pitch = document.getElementById('pitch-slider').value;
+
+      const preferredVoice = voices.find(v => v.name.includes('Google US English')) || voices.find(v => v.lang ===
+        'en-US');
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      sentenceContainer.classList.add('text-indigo-600');
+      utterance.onend = () => {
+        sentenceContainer.classList.remove('text-indigo-600');
+      };
+
+      synth.speak(utterance);
+    }
+
+    function nextSentence() {
+      if (currentIndex < rawSentences.length - 1) {
+        currentIndex++;
+        updateUI();
+      } else {
+        triggerConfetti();
+      }
+    }
+
+    function prevSentence() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateUI();
+      }
+    }
+
+    function toggleSettings() {
+      const modal = document.getElementById('settings-modal');
+      modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function triggerConfetti() {
+      const colors = ['#f43f5e', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
+      for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.animation = `confetti-fall ${Math.random() * 2 + 2}s linear forwards`;
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 4000);
+      }
+      setTimeout(() => {
+        if (confirm("Great job! Read again?")) {
+          currentIndex = 0;
+          updateUI();
+        }
+      }, 2000);
+    }
+
+    window.onload = () => {
+      updateUI();
+      loadVoices();
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') nextSentence();
+      if (e.key === 'ArrowLeft') prevSentence();
+      if (e.key === ' ' || e.key === 'Enter') speakSentence();
+    });
+  </script>
+</body>
+</html>

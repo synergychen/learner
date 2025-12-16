@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to Image</title>
+    <link rel="icon" type="image/png" href="https://i.imgur.com/lmwPMlL.png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/lmwPMlL.png">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #e0e0e0;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #e0e0e0;
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-section, .preview-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #071df5;
+            color: white;
+            padding: 12px 16px;
+            font-weight: 300;
+            font-size: 16px;
+        }
+
+        .markdown-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 25px 30px;
+            border: none;
+            background: #161b22;
+            color: #e0e0e0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+        }
+
+        .markdown-input::placeholder {
+            color: #7d8590;
+        }
+
+        .preview-content {
+            padding: 25px 30px 30px;
+            min-height: 200px;
+            background: #161b22;
+            color: #e0e0e0;
+            overflow-wrap: break-word;
+        }
+
+        .preview-content h1,
+        .preview-content h2,
+        .preview-content h3,
+        .preview-content h4,
+        .preview-content h5,
+        .preview-content h6 {
+            margin: 15px 0 10px;
+            color: #6a78f8;
+            font-weight: 300;
+        }
+
+        .preview-content h1 { font-size: 1.4rem; }
+        .preview-content h2 { font-size: 1.2rem; }
+        .preview-content h3, .preview-content h4, .preview-content h5, .preview-content h6 {
+            font-size: 1.0rem;
+        }
+
+        .preview-content p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+
+        .preview-content ul,
+        .preview-content ol {
+            margin: 15px 0;
+            padding-left: 1px;
+        }
+
+        .preview-content ul {
+            list-style: none;
+        }
+
+        .preview-content ul li {
+            position: relative;
+            margin-bottom: 8px;
+            padding-left: 20px;
+        }
+
+        .preview-content ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.6em;
+            width: 6px;
+            height: 6px;
+            border-right: 1.5px solid #6a78f8;
+            border-bottom: 1.5px solid #6a78f8;
+            transform: rotate(-45deg);
+            opacity: 0.5;
+        }
+
+        .preview-content ol li {
+            margin-bottom: 8px;
+        }
+
+        .preview-content blockquote {
+            border-left: 4px solid #071df5;
+            margin: 20px 0;
+            padding: 15px 20px;
+            background: #21262d;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .preview-content code {
+            background: #21262d;
+            color: #e0e0e0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+        }
+
+        .preview-content pre {
+            background: #21262d;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .preview-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .preview-content table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 0.1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 5px 0 20px 0;
+        }
+
+        .preview-content th,
+        .preview-content td {
+            border: 0.1px solid #30363d;
+            padding: 8px 12px;
+            text-align: left;
+            background: transparent;
+            color: #e0e0e0;
+        }
+
+        .preview-content th {
+            font-weight: 100;
+        }
+
+        .preview-content a {
+            color: #6a78f8;
+            text-decoration: none;
+        }
+
+        .preview-content a:hover {
+            text-decoration: underline;
+        }
+
+        .preview-content hr {
+            border: none;
+            border-top: 1px solid #30363d;
+            margin: 10px 0;
+            padding-bottom: 5px;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .action-btn {
+            width: 100%;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 100;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .download-btn {
+            background: #071df5;
+            color: white;
+        }
+
+        .download-btn:hover {
+            background: #0615d1;
+            transform: translateY(-1px);
+        }
+
+        .share-btn {
+            background: #071df5;
+            color: white;
+        }
+
+        .share-btn:hover {
+            background: #0615d1;
+            transform: translateY(-1px);
+        }
+
+        .action-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-icon {
+            font-size: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                max-width: 1200px;
+            }
+
+            .editor-container {
+                flex-direction: row;
+            }
+
+            .input-section, .preview-section {
+                flex: 1;
+            }
+
+            .button-container {
+                flex-direction: row;
+            }
+        }
+
+        /* iPhone specific optimizations */
+        @media (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .markdown-input {
+                min-height: 150px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            .preview-content {
+                min-height: 150px;
+            }
+
+            .action-btn {
+                font-size: 16px;
+                padding: 14px;
+                min-height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="editor-container">
+            <div class="input-section">
+                <div class="section-header">Markdown Editor</div>
+                <textarea
+                    class="markdown-input"
+                    id="markdown-input"
+                    placeholder="# Hello World
+
+This is **bold** text and this is *italic* text.
+
+- List item 1
+- List item 2
+- List item 3
+
+```javascript
+console.log('Hello, World!');
+```
+
+> This is a blockquote"
+                ></textarea>
+            </div>
+
+            <div class="preview-section">
+                <div class="section-header">Preview</div>
+                <div class="preview-content" id="preview-content">
+                    <p>Your markdown preview will appear here...</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="action-btn share-btn" id="share-btn">
+            Download As Image
+        </button>
+    </div>
+
+    <script>
+        const markdownInput = document.getElementById('markdown-input');
+        const previewContent = document.getElementById('preview-content');
+        const shareBtn = document.getElementById('share-btn');
+
+        function updatePreview() {
+            let markdownText = markdownInput.value;
+            if (markdownText.trim() === '') {
+                previewContent.innerHTML = '<p>Your markdown preview will appear here...</p>';
+                return;
+            }
+
+            // Replace literal \n strings with actual newlines
+            markdownText = markdownText.replace(/\\n/g, '\n');
+
+            const htmlContent = marked.parse(markdownText);
+            previewContent.innerHTML = htmlContent;
+        }
+
+        function generateCanvas() {
+            return html2canvas(previewContent, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                allowTaint: true
+            });
+        }
+
+        function setButtonLoading(button, isLoading) {
+            if (isLoading) {
+                button.disabled = true;
+                button.textContent = 'Generating...';
+            } else {
+                button.disabled = false;
+                button.textContent = 'Download As Image';
+            }
+        }
+
+        async function shareAsImage() {
+            if (!navigator.share) {
+                // Fallback to download if Web Share API is not supported
+                downloadAsImage();
+                return;
+            }
+
+            setButtonLoading(shareBtn, true);
+
+            try {
+                const canvas = await generateCanvas();
+
+                // Convert canvas to blob
+                canvas.toBlob(async (blob) => {
+                    try {
+                        const file = new File([blob], 'markdown-export.png', { type: 'image/png' });
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                                title: 'Markdown Export',
+                                text: 'Generated from Markdown to Image',
+                                files: [file]
+                            });
+                        } else {
+                            // Fallback to basic share without files
+                            const dataUrl = canvas.toDataURL('image/png');
+                            await navigator.share({
+                                title: 'Markdown Export',
+                                text: 'Generated from Markdown to Image',
+                                url: dataUrl
+                            });
+                        }
+                    } catch (shareError) {
+                        console.log('Share cancelled or failed:', shareError);
+                        // If share fails, fallback to download
+                        downloadAsImage();
+                    } finally {
+                        setButtonLoading(shareBtn, false);
+                    }
+                }, 'image/png');
+            } catch (error) {
+                console.error('Error generating image:', error);
+                alert('Error generating image. Please try again.');
+                setButtonLoading(shareBtn, false);
+            }
+        }
+
+        function downloadAsImage() {
+            setButtonLoading(shareBtn, true);
+
+            generateCanvas().then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'markdown-export.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                setButtonLoading(shareBtn, false);
+            }).catch(error => {
+                console.error('Error generating image:', error);
+                alert('Error generating image. Please try again.');
+                setButtonLoading(shareBtn, false);
+            });
+        }
+
+        markdownInput.addEventListener('input', updatePreview);
+        shareBtn.addEventListener('click', shareAsImage);
+
+        // Initial preview update
+        updatePreview();
+    </script>
+</body>
+</html>
