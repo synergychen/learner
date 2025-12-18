@@ -1705,6 +1705,38 @@
 
         let currentTab = 'videos'; // Default tab
 
+        // Global shared audio player to handle continuous play and bypass autoplay restrictions
+        window.sharedAudio = new Audio();
+        window.sharedAudio._unlocked = false;
+
+        function getSharedAudio() {
+            const audio = window.sharedAudio;
+            // Clear all possible dynamic listeners before reuse
+            audio.onended = null;
+            audio.ontimeupdate = null;
+            audio.onerror = null;
+            audio.onplaying = null;
+            audio.onpause = null;
+            audio.onloadstart = null;
+            return audio;
+        }
+
+        // Function to unlock audio on first human interaction
+        function unlockAudio() {
+            if (!window.sharedAudio._unlocked) {
+                console.log('Unlocking audio context...');
+                // Playing a silent 1ms buffer is often needed on mobile/safari
+                // but any .play() on a human click usually works.
+                window.sharedAudio.play().then(() => {
+                    window.sharedAudio.pause();
+                    window.sharedAudio._unlocked = true;
+                    console.log('Audio context unlocked');
+                }).catch(e => {
+                    // This might fail if called outside a gesture, which is fine
+                });
+            }
+        }
+
         // Global callback function for JSONP
         window.googleSheetsCallback = function(data) {
             window.sheetsData = data;
@@ -2225,10 +2257,11 @@
                 const nextListenBtn = nextPost.querySelector('.listen-btn');
                 if (nextListenBtn) {
                     console.log('Continuous play: starting audio for next post');
-                    // Small delay to let the current audio fully clean up
+                    // Small delay to let the current audio fully clean up.
+                    // Reduced to 100ms to keep gesture/engagement link stronger.
                     setTimeout(() => {
                         toggleSpeech(nextListenBtn);
-                    }, 500);
+                    }, 100);
                 }
             }
         }
@@ -3481,7 +3514,8 @@
                         // Single chunk audio (original behavior)
                         const audioContent = audioResult.firstChunk || audioResult;
 
-                        const audio = new Audio();
+                        // Use shared audio player
+                        const audio = getSharedAudio();
                         audio.src = `data:audio/mp3;base64,${audioContent}`;
                         audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
@@ -3531,19 +3565,19 @@
                             autoContinuousPlay(button);
                         };
 
-                        // Handle audio error
-                        audio.onerror = function() {
-                            console.error('Audio playback error');
-                            clearTextTracking(contentDiv);
-                            resetButton(button);
-                        };
-
                         // Start playing
-                        await audio.play();
+                        try {
+                            await audio.play();
+                        } catch (playError) {
+                            if (playError.name === 'NotAllowedError') {
+                                throw new Error('Autoplay blocked. Please click the play button manually.');
+                            }
+                            throw playError;
+                        }
                     }
 
                 } catch (error) {
-                    console.error('Text-to-speech error:', error);
+                    console.error('Text-to-speech playback error:', error);
                     button.classList.remove('loading');
                     resetButton(button);
 
@@ -3552,8 +3586,10 @@
                         alert('Failed to generate speech. Please check your Google Cloud TTS API key in settings.');
                     } else if (errorMsg.includes('quota') || errorMsg.includes('429')) {
                         alert('TTS Quota exceeded or too many requests. Please try again in a moment.');
+                    } else if (errorMsg.includes('Autoplay blocked') || errorMsg.includes('not allowed')) {
+                        alert('Autoplay blocked by your browser. Please click Play once to enable continuous playback.');
                     } else {
-                        alert(`Failed to fetch speech: ${errorMsg}`);
+                        alert(`Playback error: ${errorMsg}`);
                     }
                 } finally {
                     speechState.isLoading = false;
@@ -4080,7 +4116,9 @@
                 const chunkBytes = new TextEncoder().encode(this.streamingResult.chunks[0]).length;
                 console.log(`%c🔊 Playing chunk 1/${this.streamingResult.totalChunks}`, 'color: #9C27B0', `(${chunkBytes.toLocaleString()} bytes)`);
                 this.chunkStartTime = performance.now();
-                const audio = new Audio();
+
+                // Use shared audio player
+                const audio = getSharedAudio();
                 audio.src = `data:audio/mp3;base64,${this.streamingResult.firstChunk}`;
                 audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
@@ -4089,12 +4127,19 @@
 
                 // Set up event handlers
                 audio.onended = () => this.onChunkEnded();
-                audio.onerror = () => this.onAudioError();
+                audio.onerror = (e) => this.onAudioError(e);
 
                 // Set up text tracking
                 this.setupTextTracking(audio);
 
-                await audio.play();
+                try {
+                    await audio.play();
+                } catch (playError) {
+                    if (playError.name === 'NotAllowedError') {
+                        throw new Error('Autoplay blocked. Please click the play button manually.');
+                    }
+                    throw playError;
+                }
                 this.isPlaying = true;
                 this.isPaused = false;
             }
@@ -4128,7 +4173,9 @@
                     const chunkBytes = new TextEncoder().encode(nextChunk.text).length;
                     console.log(`%c🔊 Playing chunk ${nextChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #9C27B0', `(${chunkBytes.toLocaleString()} bytes)`);
                     this.chunkStartTime = performance.now();
-                    const audio = new Audio();
+
+                    // Use shared player
+                    const audio = getSharedAudio();
                     audio.src = `data:audio/mp3;base64,${nextChunk.audioContent}`;
                     audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
@@ -4136,12 +4183,20 @@
                     this.currentChunkIndex = nextChunkIndex;
 
                     audio.onended = () => this.onChunkEnded();
-                    audio.onerror = () => this.onAudioError();
+                    audio.onerror = (e) => this.onAudioError(e);
 
                     // Set up text tracking for this chunk
                     this.setupTextTracking(audio);
 
-                    await audio.play();
+                    try {
+                        await audio.play();
+                    } catch (playError) {
+                        console.error('Next chunk playback failed:', playError);
+                        // Likely a permission issue after a long chunk, show error
+                        if (playError.name === 'NotAllowedError') {
+                            alert('Playback was interrupted by your browser. Please click the resume button.');
+                        }
+                    }
                 } else {
                     // Chunk not ready yet, wait and retry
                     console.log(`%c⏳ Chunk ${nextChunkIndex + 1} not ready, waiting...`, 'color: #FF9800');
@@ -4160,17 +4215,20 @@
 
             async resume() {
                 if (this.currentAudio && this.isPaused) {
-                    await this.currentAudio.play();
-                    this.isPlaying = true;
-                    this.isPaused = false;
-                    console.log(`%c▶️ Resumed chunk ${this.currentChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #4CAF50');
+                    try {
+                        await this.currentAudio.play();
+                        this.isPlaying = true;
+                        this.isPaused = false;
+                        console.log(`%c▶️ Resumed chunk ${this.currentChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #4CAF50');
+                    } catch (e) {
+                        console.error('Resume failed:', e);
+                    }
                 }
             }
 
             stop() {
                 if (this.currentAudio) {
                     this.currentAudio.pause();
-                    this.currentAudio.currentTime = 0;
                 }
                 this.isPlaying = false;
                 this.isPaused = false;
@@ -4180,8 +4238,8 @@
                 console.log(`%c⏹ Audio stopped`, 'color: #f44336');
             }
 
-            onAudioError() {
-                console.error(`%c✗ Audio error in chunk ${this.currentChunkIndex + 1}`, 'color: #f44336');
+            onAudioError(e) {
+                console.error(`%c✗ Audio error in chunk ${this.currentChunkIndex + 1}:`, 'color: #f44336', e);
                 this.onAllChunksFinished();
             }
 
@@ -4215,11 +4273,15 @@
                     // Stop single audio if present
                     if (button.speechState.audio) {
                         button.speechState.audio.pause();
-                        button.speechState.audio.currentTime = 0;
                     }
                     resetButton(button);
                 }
             });
+
+            // Stop shared audio player if it belongs to someone else
+            if (window.sharedAudio && !window.sharedAudio.paused) {
+                 window.sharedAudio.pause();
+            }
 
             // Stop all YouTube videos
             const allIframes = document.querySelectorAll('iframe');
@@ -4249,7 +4311,6 @@
                 // Clean up single audio if present
                 if (button.speechState.audio) {
                     button.speechState.audio.pause();
-                    button.speechState.audio.currentTime = 0;
                     button.speechState.audio = null;
                 }
                 button.speechState.isPlaying = false;
