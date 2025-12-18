@@ -2140,6 +2140,14 @@
                     container.appendChild(postElement);
                 });
 
+                // Preload first audio if it's the current tab and it's the first render
+                if (currentTab === tabType && posts.length > 0) {
+                    const firstListenBtn = container.querySelector('.listen-btn');
+                    if (firstListenBtn) {
+                        preloadSpeech(firstListenBtn);
+                    }
+                }
+
             } catch (error) {
                 console.error(`Error loading ${tabType}:`, error);
                 loadingElement.style.display = 'none';
@@ -4212,6 +4220,18 @@
                     resetButton(button);
                 }
             });
+
+            // Stop all YouTube videos
+            const allIframes = document.querySelectorAll('iframe');
+            allIframes.forEach(iframe => {
+                try {
+                    iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+                } catch (e) {}
+            });
+        }
+
+        function stopAllPlayback() {
+            stopAllOtherAudio(null);
         }
 
         function resetButton(button) {
@@ -4806,6 +4826,9 @@
 
             console.log('Switched to tab:', tabType);
 
+            // Stop all playback when switching tabs
+            stopAllPlayback();
+
             // Update current tab
             currentTab = tabType;
 
@@ -4846,7 +4869,11 @@
             cachedData[tabType] = null;
 
             const container = document.getElementById(`${tabType}-container`);
-            const previousContent = container ? container.innerHTML : '';
+            if (container) {
+                // Stop all playback before clearing content to avoid orphaned audio
+                stopAllPlayback();
+                container.innerHTML = '';
+            }
 
             try {
                 await loadTabData(tabType);
@@ -4854,10 +4881,6 @@
                 const noPostsElement = document.getElementById('no-posts');
                 if (noPostsElement) {
                     noPostsElement.style.display = 'none';
-                }
-
-                if (container) {
-                    container.innerHTML = '';
                 }
 
                 await renderTabContent(tabType);
