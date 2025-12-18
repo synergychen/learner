@@ -1733,9 +1733,20 @@
                     console.log('Audio context unlocked');
                 }).catch(e => {
                     // This might fail if called outside a gesture, which is fine
+                    console.log('Audio unlock deferred:', e.message);
                 });
             }
         }
+
+        // Handle page refresh/clean start logic
+        window.addEventListener('load', () => {
+            console.log('Initial page load: clearing all audio states');
+            if (window.sharedAudio) {
+                window.sharedAudio.pause();
+                window.sharedAudio.src = '';
+                window.sharedAudio._unlocked = false;
+            }
+        });
 
         // Global callback function for JSONP
         window.googleSheetsCallback = function(data) {
@@ -1867,6 +1878,7 @@
 
             listenBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
+                unlockAudio(); // CRITICAL: unlock audio on first click
                 toggleSpeech(listenBtn);
             });
 
@@ -4346,7 +4358,13 @@
         }
 
         function stopAllPlayback() {
+            console.log('Stopping all media playback...');
             stopAllOtherAudio(null);
+            if (window.sharedAudio) {
+                window.sharedAudio.pause();
+                // We don't clear .src here to allow resumes if needed,
+                // but for a "totally clean state", we ensure all buttons are reset.
+            }
         }
 
         function resetButton(button) {
@@ -4816,6 +4834,9 @@
 
         // Load posts when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            // Ensure any existing audio is stopped on refresh
+            stopAllPlayback();
+
             // Initialize global playback speed
             const playbackSpeeds = [1.0, 1.25, 1.5, 2.0];
             const savedSpeedIndex = parseInt(localStorage.getItem('learner_playback_speed_index')) || 0;
@@ -4848,6 +4869,7 @@
 
             headerBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
+                unlockAudio(); // CRITICAL: unlock here too
 
                 // Get the active listen button reference
                 const activeListenBtn = headerBtn._activeListenButton;
