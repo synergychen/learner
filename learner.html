@@ -1907,7 +1907,9 @@
                 listenBtn.speechState = {
                     audio: null,
                     isPlaying: false,
-                    isPaused: false
+                    isPaused: false,
+                    preloadedResult: null,
+                    isLoading: false
                 };
 
                 listenBtn.addEventListener('click', function(e) {
@@ -2254,6 +2256,9 @@
                 // Call webhook for read (read=1)
                 callWebhook(videoUrl, 1);
 
+                // Preload next post audio
+                preloadNextPostAudio(postDiv);
+
                 // Scroll to next post after marking as read
                 setTimeout(() => {
                     scrollToNextPost(postDiv);
@@ -2300,6 +2305,9 @@
 
                 // Call webhook for read (read=1)
                 callWebhook(videoUrl, 1);
+
+                // Preload next post audio
+                preloadNextPostAudio(postDiv);
 
                 // Scroll to next post after marking as read
                 setTimeout(() => {
@@ -2348,6 +2356,9 @@
                 }
 
                 console.log('Note archived');
+
+                // Preload next post audio
+                preloadNextPostAudio(postDiv);
 
                 // Scroll to next post after archiving
                 setTimeout(() => {
@@ -3256,8 +3267,65 @@
         };
 
         // Speech synthesis functionality using Google Cloud TTS with streaming support
+        function getSpeechText(button) {
+            const postElement = button.closest('.blog-post');
+            const contentDiv = postElement.querySelector('.post-content');
+            let textToSpeak = 'Overview.';
+
+            if (contentDiv) {
+                // Clone the content to avoid modifying the original
+                const contentClone = contentDiv.cloneNode(true);
+
+                // Remove all tables from the clone
+                const tables = contentClone.querySelectorAll('table');
+                tables.forEach(table => table.remove());
+
+                // Get the text content after removing tables
+                const contentText = contentClone.textContent || contentClone.innerText || '';
+                textToSpeak = `Overview. ${contentText.trim()}`;
+            }
+            return textToSpeak;
+        }
+
+        async function preloadSpeech(button) {
+            const speechState = button.speechState;
+            if (!speechState || speechState.preloadedResult || speechState.audio || speechState.audioQueueManager || speechState.isLoading) return;
+
+            // Check if API key is configured
+            if (!GOOGLE_CLOUD_TTS_CONFIG.apiKey) return;
+
+            try {
+                speechState.isLoading = true;
+                const textToSpeak = getSpeechText(button);
+                const audioResult = await synthesizeSpeech(textToSpeak);
+                speechState.preloadedResult = audioResult;
+                console.log('Preloaded audio for:', button.closest('.blog-post').querySelector('.post-title')?.textContent);
+            } catch (e) {
+                console.error('Preload failed:', e);
+            } finally {
+                speechState.isLoading = false;
+            }
+        }
+
+        function preloadNextPostAudio(currentPostDiv) {
+            const container = currentPostDiv.parentElement;
+            if (!container) return;
+            const allPosts = Array.from(container.querySelectorAll('.blog-post'));
+            const currentIndex = allPosts.indexOf(currentPostDiv);
+
+            if (currentIndex >= 0 && currentIndex < allPosts.length - 1) {
+                const nextPost = allPosts[currentIndex + 1];
+                const nextListenBtn = nextPost.querySelector('.listen-btn');
+                if (nextListenBtn) {
+                    preloadSpeech(nextListenBtn);
+                }
+            }
+        }
+
         async function toggleSpeech(button) {
             const speechState = button.speechState;
+
+            if (speechState.isLoading && !speechState.preloadedResult) return;
 
             // Stop all other playing audio first
             stopAllOtherAudio(button);
@@ -3310,23 +3378,8 @@
                     return;
                 }
 
-                // Start new speech - get text content from post content div, excluding tables
                 const postElement = button.closest('.blog-post');
                 const contentDiv = postElement.querySelector('.post-content');
-                let textToSpeak = 'Overview.';
-
-                if (contentDiv) {
-                    // Clone the content to avoid modifying the original
-                    const contentClone = contentDiv.cloneNode(true);
-
-                    // Remove all tables from the clone
-                    const tables = contentClone.querySelectorAll('table');
-                    tables.forEach(table => table.remove());
-
-                    // Get the text content after removing tables
-                    const contentText = contentClone.textContent || contentClone.innerText || '';
-                    textToSpeak = `Overview. ${contentText.trim()}`;
-                }
 
                 // Set up text tracking for scroll-along feature
                 if (contentDiv) {
@@ -3337,22 +3390,32 @@
                 }
 
                 try {
-                    // Update button to loading state
-                    button.classList.add('loading');
-                    button.innerHTML = `
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.416" stroke-dashoffset="31.416">
-                                <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
-                                <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
-                            </circle>
-                        </svg>
-                    `;
+                    let audioResult;
 
-                    // Call Google Cloud TTS API (returns either single audio or streaming result)
-                    const audioResult = await synthesizeSpeech(textToSpeak);
+                    if (speechState.preloadedResult) {
+                        console.log('Using preloaded audio result');
+                        audioResult = speechState.preloadedResult;
+                        speechState.preloadedResult = null;
+                    } else {
+                        speechState.isLoading = true;
+                        const textToSpeak = getSpeechText(button);
+
+                        // Update button to loading state
+                        button.classList.add('loading');
+                        button.innerHTML = `
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                                    <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                                    <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                                </circle>
+                            </svg>
+                        `;
+
+                        audioResult = await synthesizeSpeech(textToSpeak);
+                    }
 
                     // Check if this is a streaming result (multiple chunks) or single audio
-                    if (audioResult.totalChunks && audioResult.totalChunks > 1) {
+                    if (audioResult && audioResult.totalChunks && audioResult.totalChunks > 1) {
                         // Streaming audio with multiple chunks
                         console.log(`Starting streaming playback with ${audioResult.totalChunks} chunks`);
 
@@ -3378,7 +3441,7 @@
                         // Start streaming playback
                         await audioQueueManager.playFirstChunk();
 
-                    } else {
+                    } else if (audioResult) {
                         // Single chunk audio (original behavior)
                         const audioContent = audioResult.firstChunk || audioResult;
 
@@ -3448,6 +3511,8 @@
                     button.classList.remove('loading');
                     resetButton(button);
                     alert('Failed to generate speech. Please check your API key and try again.');
+                } finally {
+                    speechState.isLoading = false;
                 }
             }
         }
