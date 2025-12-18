@@ -2219,7 +2219,7 @@
                     console.log('Continuous play: starting audio for next post');
                     // Small delay to let the current audio fully clean up
                     setTimeout(() => {
-                        nextListenBtn.click();
+                        toggleSpeech(nextListenBtn);
                     }, 500);
                 }
             }
@@ -3332,7 +3332,28 @@
         async function toggleSpeech(button) {
             const speechState = button.speechState;
 
-            if (speechState.isLoading && !speechState.preloadedResult) return;
+            // If already loading (from preload), wait for it to finish then continue
+            if (speechState.isLoading && !speechState.preloadedResult) {
+                console.log('Play requested while preloading... waiting');
+                // Show loading state while waiting
+                button.classList.add('loading');
+                button.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                            <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                            <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                        </circle>
+                    </svg>
+                `;
+
+                // Wait up to 15 seconds for preload
+                let waitTime = 0;
+                while (speechState.isLoading && !speechState.preloadedResult && waitTime < 15000) {
+                    await new Promise(r => setTimeout(r, 100));
+                    waitTime += 100;
+                }
+                console.log('Wait finished, status:', { loaded: !!speechState.preloadedResult, time: waitTime });
+            }
 
             // Stop all other playing audio first
             stopAllOtherAudio(button);
@@ -3517,7 +3538,15 @@
                     console.error('Text-to-speech error:', error);
                     button.classList.remove('loading');
                     resetButton(button);
-                    alert('Failed to generate speech. Please check your API key and try again.');
+
+                    const errorMsg = error.message || 'Unknown network error';
+                    if (errorMsg.includes('API key')) {
+                        alert('Failed to generate speech. Please check your Google Cloud TTS API key in settings.');
+                    } else if (errorMsg.includes('quota') || errorMsg.includes('429')) {
+                        alert('TTS Quota exceeded or too many requests. Please try again in a moment.');
+                    } else {
+                        alert(`Failed to fetch speech: ${errorMsg}`);
+                    }
                 } finally {
                     speechState.isLoading = false;
                 }
