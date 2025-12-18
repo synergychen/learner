@@ -1821,21 +1821,57 @@
             titleContainer.appendChild(titleElement);
 
             let listenBtn = null;
-            let dateElement = null;
-            if (!isNote) {
-                dateElement = document.createElement('div');
-                dateElement.className = 'post-date';
 
-                let dateText = `Added: ${formatDate(post.addedAt)}`;
-                if (post.publishedAt) {
-                    dateText += `\nPublished: ${formatDate(post.publishedAt)}`;
-                }
+            // Create metadata and listen button for both videos and notes
+            const dateElement = document.createElement('div');
+            dateElement.className = 'post-date';
 
-                const readingTime = calculateReadingTime(post.summary || '');
-                dateText += `\n${readingTime}`;
+            const metadataInfo = document.createElement('div');
+            metadataInfo.style.flex = '1';
+            metadataInfo.style.whiteSpace = 'pre-line';
 
-                dateElement.textContent = dateText;
+            let dateText = `Added: ${formatDate(post.addedAt, isNote)}`;
+            if (post.publishedAt) {
+                dateText += `\nPublished: ${formatDate(post.publishedAt)}`;
             }
+
+            const readingTime = calculateReadingTime(post.summary || '');
+            const readingTimeSpan = document.createElement('span');
+            readingTimeSpan.className = 'reading-time';
+            readingTimeSpan.textContent = readingTime;
+
+            metadataInfo.textContent = dateText;
+            metadataInfo.appendChild(document.createElement('br'));
+            metadataInfo.appendChild(readingTimeSpan);
+
+            dateElement.appendChild(metadataInfo);
+
+            listenBtn = document.createElement('button');
+            listenBtn.className = 'listen-btn';
+            listenBtn.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                </svg>
+            `;
+
+            listenBtn.postData = post;
+            listenBtn.speechState = {
+                audio: null,
+                isPlaying: false,
+                isPaused: false,
+                preloadedResult: null,
+                isLoading: false,
+                totalPlayTime: 0,
+                lastPlayStartTime: null
+            };
+
+            listenBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleSpeech(listenBtn);
+            });
+
+            dateElement.appendChild(listenBtn);
+            headerDiv.appendChild(dateElement);
 
             // Initialize post state based on post.isRead or post.isArchived
             if (isNote) {
@@ -1926,32 +1962,7 @@
 
             headerDiv.appendChild(titleContainer);
 
-            if (!isNote) {
-                listenBtn = document.createElement('button');
-                listenBtn.className = 'listen-btn';
-                listenBtn.innerHTML = `
-                    <svg width="14" height="14" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
-                    </svg>
-                `;
-
-                listenBtn.postData = post;
-                listenBtn.speechState = {
-                    audio: null,
-                    isPlaying: false,
-                    isPaused: false,
-                    preloadedResult: null,
-                    isLoading: false
-                };
-
-                listenBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    toggleSpeech(listenBtn);
-                });
-
-                dateElement.appendChild(listenBtn);
-                headerDiv.appendChild(dateElement);
-            }
+            // Metadata and Listen button are already added above
 
             // Add YouTube embed to header if video URL exists
             if (post.videoUrl && post.videoUrl.trim()) {
@@ -3400,6 +3411,12 @@
             stopAllOtherAudio(button);
 
             if (speechState.isPlaying) {
+                // Track play time before pausing
+                if (speechState.lastPlayStartTime) {
+                    speechState.totalPlayTime += (performance.now() - speechState.lastPlayStartTime) / 1000;
+                    speechState.lastPlayStartTime = null;
+                }
+
                 // Pause current audio (works for both single and streaming audio)
                 if (speechState.audioQueueManager) {
                     // Streaming audio
@@ -3420,6 +3437,9 @@
                 `;
                 updateFloatingMarkState();
             } else if (speechState.isPaused) {
+                // Track start time on resume
+                speechState.lastPlayStartTime = performance.now();
+
                 // Resume paused audio (works for both single and streaming audio)
                 if (speechState.audioQueueManager) {
                     // Streaming audio
@@ -3492,7 +3512,8 @@
                         speechState.audioQueueManager = audioQueueManager;
                         speechState.audio = null; // Clear single audio reference
 
-                        // Update button state
+                        // Update button state and start tracking time
+                        speechState.totalPlayTime = 0; // Reset
                         speechState.isPlaying = true;
                         speechState.isPaused = false;
                         button.classList.remove('loading');
@@ -3519,7 +3540,10 @@
                         audio.src = `data:audio/mp3;base64,${audioContent}`;
                         audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
-                        // Update button state
+                        // Update button state and start tracking time
+                        speechState.totalPlayTime = 0;
+                        speechState.lastPlayStartTime = performance.now();
+
                         speechState.audio = audio;
                         speechState.audioQueueManager = null; // Clear streaming reference
                         speechState.isPlaying = true;
@@ -3556,6 +3580,12 @@
 
                         // Handle audio end
                         audio.onended = function() {
+                            if (speechState.lastPlayStartTime) {
+                                speechState.totalPlayTime += (performance.now() - speechState.lastPlayStartTime) / 1000;
+                                speechState.lastPlayStartTime = null;
+                            }
+                            updateAudioMinutes(button, speechState.totalPlayTime);
+
                             clearTextTracking(contentDiv);
                             resetButton(button);
                             updateFloatingMarkState();
@@ -3812,6 +3842,26 @@
             `;
 
             container.appendChild(fallbackDiv);
+        }
+
+        // Function to update the audio minutes in the post header
+        function updateAudioMinutes(button, durationSeconds) {
+            if (!durationSeconds || durationSeconds <= 0) return;
+
+            const playbackRate = window.currentPlaybackSpeed || 1.0;
+            // if it actually took 10 minutes to play and play speed is 2x then the audio time is 20 minutes
+            const contentMinutes = (durationSeconds * playbackRate) / 60;
+            const contentMinutesRounded = Math.ceil(contentMinutes);
+
+            // Find the reading-time span in the post header
+            const postHeader = button.closest('.post-header');
+            if (postHeader) {
+                const readingTimeSpan = postHeader.querySelector('.reading-time');
+                if (readingTimeSpan) {
+                    const originalText = readingTimeSpan.textContent.split(' / ')[0];
+                    readingTimeSpan.textContent = `${originalText} / ${contentMinutesRounded} min audio`;
+                }
+            }
         }
 
         // Function to calculate reading time based on word count (English) and character count (Chinese)
@@ -4245,6 +4295,9 @@
 
             onAllChunksFinished() {
                 console.log(`%c🎵 Playback complete (${this.streamingResult.totalChunks} chunks)`, 'font-weight: bold; color: #4CAF50', `(total: ${this.totalPlayTime.toFixed(1)}s)`);
+                // Update header with audio minutes
+                updateAudioMinutes(this.button, this.totalPlayTime);
+
                 // Clear text tracking highlights
                 clearTextTracking(this.contentDiv);
                 resetButton(this.button);
