@@ -851,6 +851,63 @@
             color: #28a745;
         }
 
+        .settings-section-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin: 20px 0 10px;
+            color: #071df5;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        body.dark-mode .settings-section-title {
+            color: #6a78f8;
+            border-bottom-color: #444;
+        }
+
+        .bulk-config-container {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px dashed #eee;
+        }
+
+        body.dark-mode .bulk-config-container {
+            border-top-color: #444;
+        }
+
+        .bulk-config-textarea {
+            width: 100%;
+            height: 120px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            resize: vertical;
+            line-height: 1.4;
+        }
+
+        body.dark-mode .bulk-config-textarea {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            border-color: #555;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #666;
+        }
+
+        body.dark-mode .input-label {
+            color: #aaa;
+        }
+
         .listen-btn {
             background: #071df5;
             color: white;
@@ -1473,48 +1530,15 @@
                     Sync
                 </div>
             </div>
-            <div class="menu-item" id="api-key-menu-item">
+            <div class="menu-item" id="app-config-menu-item">
                 <div class="menu-item-label">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 2L19 4L15 8L22 15L21 16L14 9L10 13L8 11L12 7L16 3L18 1L21 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M16 7L2 21L1 20L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2"/>
                     </svg>
-                    TTS API Key
+                    App Configuration
                 </div>
-                <div class="api-key-status" id="api-key-status">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-            </div>
-            <div class="menu-item" id="webhook-menu-item">
-                <div class="menu-item-label">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Webhook Config
-                </div>
-                <div class="api-key-status" id="webhook-status">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-            </div>
-            <div class="menu-item" id="datasource-menu-item">
-                <div class="menu-item-label">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <polyline points="10 9 9 9 8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Data Source
-                </div>
-                <div class="api-key-status" id="datasource-status">
+                <div class="api-key-status" id="app-config-status">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                         <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1523,89 +1547,52 @@
             </div>
         </div>
 
-        <!-- API Key Configuration Modal -->
-        <div class="api-key-modal" id="api-key-modal">
+        <!-- Unified App Configuration Modal -->
+        <div class="api-key-modal" id="unified-settings-modal">
             <div class="api-key-modal-content">
                 <div class="api-key-modal-header">
-                    <div class="api-key-modal-title">Configure Google Cloud TTS API Key</div>
-                    <button class="api-key-modal-close" id="api-key-modal-close">&times;</button>
+                    <div class="api-key-modal-title">App Configuration</div>
+                    <button class="api-key-modal-close" id="unified-settings-close">&times;</button>
                 </div>
-                <div class="api-key-help">
-                    To use text-to-speech functionality, you need a Google Cloud Text-to-Speech API key:
-                    <br><br>
-                    1. Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>
-                    <br>2. Create a project and enable Text-to-Speech API
-                    <br>3. Create credentials (API Key)
-                    <br>4. Paste your API key below
-                </div>
-                <form class="api-key-form" id="api-key-form">
+
+                <form class="api-key-form" id="unified-settings-form">
+                    <!-- TTS API Key Section -->
+                    <div class="settings-section-title">TTS API Key</div>
+                    <div class="api-key-help">
+                        Google Cloud Text-to-Speech API key for audio playback.
+                    </div>
                     <div class="input-group">
-                        <input type="text" class="api-key-input" id="api-key-input" placeholder="Enter your Google Cloud TTS API key" autocomplete="off">
-                        <button type="button" class="copy-btn" onclick="copyToClipboard('api-key-input')" title="Copy API Key">
+                        <input type="text" class="api-key-input" id="unified-api-key-input" placeholder="Google Cloud TTS API key" autocomplete="off">
+                        <button type="button" class="copy-btn" onclick="copyToClipboard('unified-api-key-input')" title="Copy API Key">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                             </svg>
                         </button>
                     </div>
-                    <div class="api-key-buttons">
-                        <button type="button" class="api-key-btn secondary" id="api-key-cancel">Cancel</button>
-                        <button type="submit" class="api-key-btn" id="api-key-save">Save</button>
-                    </div>
-                </form>
-            </div>
-        </div>
 
-        <!-- Webhook Configuration Modal -->
-        <div class="api-key-modal" id="webhook-modal">
-            <div class="api-key-modal-content">
-                <div class="api-key-modal-header">
-                    <div class="api-key-modal-title">Configure Webhook Base URL</div>
-                    <button class="api-key-modal-close" id="webhook-modal-close">&times;</button>
-                </div>
-                <div class="api-key-help">
-                    Enter the base URL for your n8n webhooks. This acts as the prefix for all webhook calls.
-                    <br><br>
-                    Example: <code>https://n8n.your-domain.com/webhook/</code>
-                </div>
-                <form class="api-key-form" id="webhook-form">
+                    <!-- Webhook Section -->
+                    <div class="settings-section-title">Webhook Config</div>
+                    <div class="api-key-help">
+                        Base URL for n8n webhooks.
+                    </div>
                     <div class="input-group">
-                        <input type="url" class="api-key-input" id="webhook-input" placeholder="https://n8n.example.com/webhook/" autocomplete="off">
-                        <button type="button" class="copy-btn" onclick="copyToClipboard('webhook-input')" title="Copy URL">
+                        <input type="url" class="api-key-input" id="unified-webhook-input" placeholder="api.domain.com/webhook" autocomplete="off">
+                        <button type="button" class="copy-btn" onclick="copyToClipboard('unified-webhook-input')" title="Copy URL">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                             </svg>
                         </button>
                     </div>
-                    <div class="api-key-buttons">
-                        <button type="button" class="api-key-btn secondary" id="webhook-cancel">Cancel</button>
-                        <button type="submit" class="api-key-btn" id="webhook-save">Save</button>
-                    </div>
-                </form>
-            </div>
-        </div>
 
-        <!-- Data Source Configuration Modal -->
-        <div class="api-key-modal" id="datasource-modal">
-            <div class="api-key-modal-content">
-                <div class="api-key-modal-header">
-                    <div class="api-key-modal-title">Configure Data Source</div>
-                    <button class="api-key-modal-close" id="datasource-modal-close">&times;</button>
-                </div>
-                <div class="api-key-help">
-                    Configure your Google Sheets data source.
-                    <br><br>
-                    1. <strong>Sheet ID:</strong> The long string in your Google Sheet URL.<br>
-                    2. <strong>Videos GID:</strong> The 'gid' parameter for the Videos tab.<br>
-                    3. <strong>Notes GID:</strong> The 'gid' parameter for the Notes tab.
-                </div>
-                <form class="api-key-form" id="datasource-form">
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Google Sheet ID</label>
+                    <!-- Data Source Section -->
+                    <div class="settings-section-title">Data Source</div>
+                    <div style="margin-bottom: 10px;">
+                        <label class="input-label">Google Sheet ID</label>
                         <div class="input-group">
-                            <input type="text" class="api-key-input" id="sheet-id-input" placeholder="1a0SeElr..." required>
-                            <button type="button" class="copy-btn" onclick="copyToClipboard('sheet-id-input')" title="Copy Sheet ID">
+                            <input type="text" class="api-key-input" id="unified-sheet-id-input" placeholder="1a0SeElr...">
+                            <button type="button" class="copy-btn" onclick="copyToClipboard('unified-sheet-id-input')" title="Copy Sheet ID">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -1613,34 +1600,33 @@
                             </button>
                         </div>
                     </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Videos Sheet GID</label>
-                        <div class="input-group">
-                            <input type="text" class="api-key-input" id="videos-gid-input" placeholder="0" required>
-                            <button type="button" class="copy-btn" onclick="copyToClipboard('videos-gid-input')" title="Copy Videos GID">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                            </button>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label class="input-label">Videos GID</label>
+                            <input type="text" class="api-key-input" id="unified-videos-gid-input" placeholder="0">
                         </div>
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Notes Sheet GID</label>
-                        <div class="input-group">
-                            <input type="text" class="api-key-input" id="notes-gid-input" placeholder="0" required>
-                            <button type="button" class="copy-btn" onclick="copyToClipboard('notes-gid-input')" title="Copy Notes GID">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                            </button>
+                        <div style="flex: 1;">
+                            <label class="input-label">Notes GID</label>
+                            <input type="text" class="api-key-input" id="unified-notes-gid-input" placeholder="0">
                         </div>
                     </div>
 
                     <div class="api-key-buttons">
-                        <button type="button" class="api-key-btn secondary" id="datasource-cancel">Cancel</button>
-                        <button type="submit" class="api-key-btn" id="datasource-save">Save & Reload</button>
+                        <button type="button" class="api-key-btn secondary" id="unified-settings-cancel">Cancel</button>
+                        <button type="submit" class="api-key-btn" id="unified-settings-save">Save & Reload</button>
+                    </div>
+
+                    <!-- Bulk Configuration Section -->
+                    <div class="bulk-config-container">
+                        <div class="settings-section-title">Bulk Configuration</div>
+                        <div class="api-key-help">
+                            Paste a JSON configuration object here to update all settings at once.
+                        </div>
+                        <textarea class="bulk-config-textarea" id="bulk-config-textarea" placeholder='{ "tts_api_key": "...", "webhook_url": "...", "sheet_id": "...", "videos_gid": "...", "notes_gid": "..." }'></textarea>
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button type="button" class="api-key-btn secondary" id="copy-bulk-config" style="padding: 6px 12px; font-size: 0.75rem;">Copy Current as JSON</button>
+                            <button type="button" class="api-key-btn" id="apply-bulk-config" style="padding: 6px 12px; font-size: 0.75rem; background-color: #28a745;">Apply JSON</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -4435,9 +4421,7 @@
             const themeToggle = document.getElementById('theme-toggle');
             const themeToggleItem = document.getElementById('theme-toggle-item');
             const syncMenuItem = document.getElementById('sync-menu-item');
-            const apiKeyMenuItem = document.getElementById('api-key-menu-item');
-            const webhookMenuItem = document.getElementById('webhook-menu-item');
-            const datasourceMenuItem = document.getElementById('datasource-menu-item');
+            const appConfigMenuItem = document.getElementById('app-config-menu-item');
 
             // Load saved theme - default to dark
             const savedTheme = localStorage.getItem('learner_theme') || 'dark';
@@ -4469,22 +4453,10 @@
                 setTimeout(() => window.location.reload(), 200);
             });
 
-            // API Key configuration
-            apiKeyMenuItem.addEventListener('click', () => {
+            // Unified App Configuration
+            appConfigMenuItem.addEventListener('click', () => {
                 closeMenu();
-                showApiKeyModal();
-            });
-
-            // Webhook configuration
-            webhookMenuItem.addEventListener('click', () => {
-                closeMenu();
-                showWebhookModal();
-            });
-
-            // Data Source configuration
-            datasourceMenuItem.addEventListener('click', () => {
-                closeMenu();
-                showDataSourceModal();
+                showUnifiedSettingsModal();
             });
 
             // Font size controls
@@ -4549,8 +4521,8 @@
             const continuousPlayToggle = document.getElementById('continuous-play-toggle');
             const continuousPlayItem = document.getElementById('continuous-play-item');
 
-            // Load saved setting - default to false (off)
-            window.continuousPlayEnabled = localStorage.getItem('learner_continuous_play') === 'true';
+            // Load saved setting - default to true (on) - UPDATED
+            window.continuousPlayEnabled = localStorage.getItem('learner_continuous_play') !== 'false';
             if (window.continuousPlayEnabled) {
                 continuousPlayToggle.classList.add('dark');
             }
@@ -4562,253 +4534,143 @@
             });
         }
 
-        // API Key Status Functions
-        function updateApiKeyStatus() {
-            const statusIndicator = document.getElementById('api-key-status');
+        // App Configuration Functions
+        function updateAppConfigStatus() {
+            const statusIndicator = document.getElementById('app-config-status');
             const apiKey = localStorage.getItem('googleCloudTTSApiKey');
-
-            if (apiKey && apiKey.trim()) {
-                statusIndicator.classList.add('configured');
-                statusIndicator.title = 'API Key configured';
-            } else {
-                statusIndicator.classList.remove('configured');
-                statusIndicator.title = 'API Key not configured';
-            }
-        }
-
-        // API Key Modal Functions
-        function showApiKeyModal() {
-            const modal = document.getElementById('api-key-modal');
-            const input = document.getElementById('api-key-input');
-
-            // Pre-fill with existing API key if available
-            const existingKey = localStorage.getItem('googleCloudTTSApiKey') || '';
-            input.value = existingKey;
-
-            modal.classList.add('show');
-            setTimeout(() => input.focus(), 100);
-        }
-
-        function hideApiKeyModal() {
-            const modal = document.getElementById('api-key-modal');
-            modal.classList.remove('show');
-        }
-
-        function saveApiKey() {
-            const input = document.getElementById('api-key-input');
-            const apiKey = input.value.trim();
-
-            if (!apiKey) {
-                alert('Please enter a valid API key');
-                return;
-            }
-
-            // Save to localStorage
-            localStorage.setItem('googleCloudTTSApiKey', apiKey);
-
-            // Update the config object
-            GOOGLE_CLOUD_TTS_CONFIG.apiKey = apiKey;
-
-            hideApiKeyModal();
-
-            // Update status indicator
-            updateApiKeyStatus();
-
-            // Show success message
-            alert('API key saved successfully! You can now use text-to-speech functionality.');
-        }
-
-        function setupApiKeyModal() {
-            const modal = document.getElementById('api-key-modal');
-            const closeBtn = document.getElementById('api-key-modal-close');
-            const cancelBtn = document.getElementById('api-key-cancel');
-            const form = document.getElementById('api-key-form');
-
-            // Close modal events
-            closeBtn.addEventListener('click', hideApiKeyModal);
-            cancelBtn.addEventListener('click', hideApiKeyModal);
-
-            // Close modal when clicking outside
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    hideApiKeyModal();
-                }
-            });
-
-            // Handle form submission
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                saveApiKey();
-            });
-
-            // Close modal with Escape key
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && modal.classList.contains('show')) {
-                    hideApiKeyModal();
-                }
-            });
-        }
-
-        function setupWebhookModal() {
-            const modal = document.getElementById('webhook-modal');
-            const closeBtn = document.getElementById('webhook-modal-close');
-            const cancelBtn = document.getElementById('webhook-cancel');
-            const form = document.getElementById('webhook-form');
-            const input = document.getElementById('webhook-input');
-
-            function showModal() {
-                // Pre-fill with existing URL if available
-                const existingUrl = localStorage.getItem('learner_webhook_base_url') || '';
-                input.value = existingUrl;
-                modal.classList.add('show');
-                setTimeout(() => input.focus(), 100);
-            }
-
-            function hideModal() {
-                modal.classList.remove('show');
-            }
-
-            function saveWebhookUrl() {
-                let url = input.value.trim();
-                // If empty, clear it
-                if (!url) {
-                    localStorage.removeItem('learner_webhook_base_url');
-                    hideModal();
-                    updateWebhookStatus();
-                    return;
-                }
-
-                if (!url.startsWith('http')) {
-                    alert('Please enter a valid URL (starting with http:// or https://)');
-                    return;
-                }
-
-                // Ensure URL ends with slash
-                if (!url.endsWith('/')) {
-                    url += '/';
-                }
-
-                localStorage.setItem('learner_webhook_base_url', url);
-                hideModal();
-                updateWebhookStatus();
-                alert('Webhook URL saved successfully!');
-            }
-
-            // Expose show function for menu click
-            window.showWebhookModal = showModal;
-
-            // Event listeners
-            closeBtn.addEventListener('click', hideModal);
-            cancelBtn.addEventListener('click', hideModal);
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) hideModal();
-            });
-
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                saveWebhookUrl();
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && modal.classList.contains('show')) {
-                    hideModal();
-                }
-            });
-        }
-
-        function updateWebhookStatus() {
-            const statusIndicator = document.getElementById('webhook-status');
-            const url = localStorage.getItem('learner_webhook_base_url');
-
-            if (url && url.trim()) {
-                statusIndicator.classList.add('configured');
-                statusIndicator.title = 'Webhook URL configured';
-            } else {
-                statusIndicator.classList.remove('configured');
-                statusIndicator.title = 'Webhook URL not configured';
-            }
-        }
-
-        function setupDataSourceModal() {
-            const modal = document.getElementById('datasource-modal');
-            const closeBtn = document.getElementById('datasource-modal-close');
-            const cancelBtn = document.getElementById('datasource-cancel');
-            const form = document.getElementById('datasource-form');
-            const sheetIdInput = document.getElementById('sheet-id-input');
-            const videosGidInput = document.getElementById('videos-gid-input');
-            const notesGidInput = document.getElementById('notes-gid-input');
-
-            function showModal() {
-                // Pre-fill with existing values
-                sheetIdInput.value = localStorage.getItem('learner_sheet_id') || '';
-                videosGidInput.value = localStorage.getItem('learner_videos_gid') || '';
-                notesGidInput.value = localStorage.getItem('learner_notes_gid') || '';
-
-                modal.classList.add('show');
-                setTimeout(() => sheetIdInput.focus(), 100);
-            }
-
-            function hideModal() {
-                modal.classList.remove('show');
-            }
-
-            function saveDataSource() {
-                const sheetId = sheetIdInput.value.trim();
-                const videosGid = videosGidInput.value.trim();
-                const notesGid = notesGidInput.value.trim();
-
-                if (!sheetId || !videosGid || !notesGid) {
-                    alert('Please fill in all fields');
-                    return;
-                }
-
-                localStorage.setItem('learner_sheet_id', sheetId);
-                localStorage.setItem('learner_videos_gid', videosGid);
-                localStorage.setItem('learner_notes_gid', notesGid);
-
-                hideModal();
-                updateDataSourceStatus();
-
-                if (confirm('Data source saved. Reload page now to apply changes?')) {
-                    window.location.reload();
-                }
-            }
-
-            // Expose show function for menu click
-            window.showDataSourceModal = showModal;
-
-            // Event listeners
-            closeBtn.addEventListener('click', hideModal);
-            cancelBtn.addEventListener('click', hideModal);
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) hideModal();
-            });
-
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                saveDataSource();
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && modal.classList.contains('show')) {
-                    hideModal();
-                }
-            });
-        }
-
-        function updateDataSourceStatus() {
-            const statusIndicator = document.getElementById('datasource-status');
+            const webhook = localStorage.getItem('learner_webhook_base_url');
             const sheetId = localStorage.getItem('learner_sheet_id');
 
-            if (sheetId) {
+            if (apiKey && webhook && sheetId) {
                 statusIndicator.classList.add('configured');
-                statusIndicator.title = 'Custom Data Source configured';
+                statusIndicator.title = 'App fully configured';
+            } else if (apiKey || webhook || sheetId) {
+                statusIndicator.classList.add('configured');
+                statusIndicator.style.opacity = '0.5';
+                statusIndicator.title = 'App partially configured';
             } else {
                 statusIndicator.classList.remove('configured');
-                statusIndicator.title = 'Using Default Data Source';
+                statusIndicator.title = 'App not configured';
             }
+        }
+
+        function showUnifiedSettingsModal() {
+            const modal = document.getElementById('unified-settings-modal');
+
+            // Populate fields from localStorage
+            document.getElementById('unified-api-key-input').value = localStorage.getItem('googleCloudTTSApiKey') || '';
+            document.getElementById('unified-webhook-input').value = localStorage.getItem('learner_webhook_base_url') || '';
+            document.getElementById('unified-sheet-id-input').value = localStorage.getItem('learner_sheet_id') || '';
+            document.getElementById('unified-videos-gid-input').value = localStorage.getItem('learner_videos_gid') || '';
+            document.getElementById('unified-notes-gid-input').value = localStorage.getItem('learner_notes_gid') || '';
+
+            updateBulkConfigTextarea();
+
+            modal.classList.add('show');
+            setTimeout(() => document.getElementById('unified-api-key-input').focus(), 100);
+        }
+
+        function hideUnifiedSettingsModal() {
+            document.getElementById('unified-settings-modal').classList.remove('show');
+        }
+
+        function updateBulkConfigTextarea() {
+            const config = {
+                tts_api_key: localStorage.getItem('googleCloudTTSApiKey') || '',
+                webhook_url: localStorage.getItem('learner_webhook_base_url') || '',
+                sheet_id: localStorage.getItem('learner_sheet_id') || '',
+                videos_gid: localStorage.getItem('learner_videos_gid') || '',
+                notes_gid: localStorage.getItem('learner_notes_gid') || ''
+            };
+            document.getElementById('bulk-config-textarea').value = JSON.stringify(config, null, 2);
+        }
+
+        function saveUnifiedSettings() {
+            const apiKey = document.getElementById('unified-api-key-input').value.trim();
+            const webhook = document.getElementById('unified-webhook-input').value.trim();
+            const sheetId = document.getElementById('unified-sheet-id-input').value.trim();
+            const videosGid = document.getElementById('unified-videos-gid-input').value.trim();
+            const notesGid = document.getElementById('unified-notes-gid-input').value.trim();
+
+            if (apiKey) localStorage.setItem('googleCloudTTSApiKey', apiKey);
+            else localStorage.removeItem('googleCloudTTSApiKey');
+
+            if (webhook) {
+                let url = webhook;
+                if (!url.startsWith('http')) url = 'https://' + url;
+                if (!url.endsWith('/')) url += '/';
+                localStorage.setItem('learner_webhook_base_url', url);
+            } else {
+                localStorage.removeItem('learner_webhook_base_url');
+            }
+
+            if (sheetId) localStorage.setItem('learner_sheet_id', sheetId);
+            else localStorage.removeItem('learner_sheet_id');
+
+            if (videosGid) localStorage.setItem('learner_videos_gid', videosGid);
+            else localStorage.removeItem('learner_videos_gid');
+
+            if (notesGid) localStorage.setItem('learner_notes_gid', notesGid);
+            else localStorage.removeItem('learner_notes_gid');
+
+            updateAppConfigStatus();
+            hideUnifiedSettingsModal();
+
+            if (confirm('Settings saved. Reload page now to apply changes?')) {
+                window.location.reload();
+            }
+        }
+
+        function setupUnifiedSettingsModal() {
+            const modal = document.getElementById('unified-settings-modal');
+            const closeBtn = document.getElementById('unified-settings-close');
+            const cancelBtn = document.getElementById('unified-settings-cancel');
+            const form = document.getElementById('unified-settings-form');
+            const copyBulkBtn = document.getElementById('copy-bulk-config');
+            const applyBulkBtn = document.getElementById('apply-bulk-config');
+            const bulkTextarea = document.getElementById('bulk-config-textarea');
+
+            closeBtn.addEventListener('click', hideUnifiedSettingsModal);
+            cancelBtn.addEventListener('click', hideUnifiedSettingsModal);
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) hideUnifiedSettingsModal();
+            });
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveUnifiedSettings();
+            });
+
+            copyBulkBtn.addEventListener('click', () => {
+                bulkTextarea.select();
+                document.execCommand('copy');
+                const originalText = copyBulkBtn.textContent;
+                copyBulkBtn.textContent = 'Copied!';
+                setTimeout(() => copyBulkBtn.textContent = originalText, 2000);
+            });
+
+            applyBulkBtn.addEventListener('click', () => {
+                try {
+                    const config = JSON.parse(bulkTextarea.value);
+                    if (config.tts_api_key !== undefined) document.getElementById('unified-api-key-input').value = config.tts_api_key;
+                    if (config.webhook_url !== undefined) document.getElementById('unified-webhook-input').value = config.webhook_url;
+                    if (config.sheet_id !== undefined) document.getElementById('unified-sheet-id-input').value = config.sheet_id;
+                    if (config.videos_gid !== undefined) document.getElementById('unified-videos-gid-input').value = config.videos_gid;
+                    if (config.notes_gid !== undefined) document.getElementById('unified-notes-gid-input').value = config.notes_gid;
+                    alert('Configuration applied to fields above. Click "Save & Reload" to commit.');
+                } catch (e) {
+                    alert('Invalid JSON format. Please check your configuration.');
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('show')) {
+                    hideUnifiedSettingsModal();
+                }
+            });
+
+            updateAppConfigStatus();
         }
 
         function copyToClipboard(elementId) {
@@ -4850,12 +4712,7 @@
                 setupTextHighlighting();
                 setupHeaderTitleUpdate();
                 setupHamburgerMenu();
-                setupApiKeyModal();
-                updateApiKeyStatus();
-                setupWebhookModal();
-                updateWebhookStatus();
-                setupDataSourceModal();
-                updateDataSourceStatus();
+                setupUnifiedSettingsModal();
                 setupBottomTabs();
                 setupBottomTabsScrollBehavior();
                 setupFloatingNav();
