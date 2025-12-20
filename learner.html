@@ -1574,7 +1574,7 @@
                     <!-- Webhook Section -->
                     <div class="settings-section-title">Webhook Config</div>
                     <div class="api-key-help">
-                        Base URL for n8n webhooks.
+                        Base URL for webhooks.
                     </div>
                     <div class="input-group">
                         <input type="url" class="api-key-input" id="unified-webhook-input" placeholder="api.domain.com/webhook" autocomplete="off">
@@ -1620,12 +1620,11 @@
                     <div class="bulk-config-container">
                         <div class="settings-section-title">Bulk Configuration</div>
                         <div class="api-key-help">
-                            Paste a JSON configuration object here to update all settings at once.
+                            Manage all settings via clipboard JSON (Copy for backup, Apply to restore).
                         </div>
-                        <textarea class="bulk-config-textarea" id="bulk-config-textarea" placeholder='{ "tts_api_key": "...", "webhook_url": "...", "sheet_id": "...", "videos_gid": "...", "notes_gid": "..." }'></textarea>
                         <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                            <button type="button" class="api-key-btn secondary" id="copy-bulk-config" style="padding: 6px 12px; font-size: 0.75rem;">Copy Current as JSON</button>
-                            <button type="button" class="api-key-btn" id="apply-bulk-config" style="padding: 6px 12px; font-size: 0.75rem; background-color: #28a745;">Apply JSON</button>
+                            <button type="button" class="api-key-btn secondary" id="copy-bulk-config" style="padding: 6px 12px; font-size: 0.75rem;">Copy all as JSON</button>
+                            <button type="button" class="api-key-btn" id="apply-bulk-config" style="padding: 6px 12px; font-size: 0.75rem; background-color: #28a745;">Apply from Clipboard</button>
                         </div>
                     </div>
                 </form>
@@ -4564,8 +4563,6 @@
             document.getElementById('unified-videos-gid-input').value = localStorage.getItem('learner_videos_gid') || '';
             document.getElementById('unified-notes-gid-input').value = localStorage.getItem('learner_notes_gid') || '';
 
-            updateBulkConfigTextarea();
-
             modal.classList.add('show');
             setTimeout(() => document.getElementById('unified-api-key-input').focus(), 100);
         }
@@ -4574,16 +4571,6 @@
             document.getElementById('unified-settings-modal').classList.remove('show');
         }
 
-        function updateBulkConfigTextarea() {
-            const config = {
-                tts_api_key: localStorage.getItem('googleCloudTTSApiKey') || '',
-                webhook_url: localStorage.getItem('learner_webhook_base_url') || '',
-                sheet_id: localStorage.getItem('learner_sheet_id') || '',
-                videos_gid: localStorage.getItem('learner_videos_gid') || '',
-                notes_gid: localStorage.getItem('learner_notes_gid') || ''
-            };
-            document.getElementById('bulk-config-textarea').value = JSON.stringify(config, null, 2);
-        }
 
         function saveUnifiedSettings() {
             const apiKey = document.getElementById('unified-api-key-input').value.trim();
@@ -4643,24 +4630,36 @@
             });
 
             copyBulkBtn.addEventListener('click', () => {
-                bulkTextarea.select();
-                document.execCommand('copy');
-                const originalText = copyBulkBtn.textContent;
-                copyBulkBtn.textContent = 'Copied!';
-                setTimeout(() => copyBulkBtn.textContent = originalText, 2000);
+                const config = {
+                    tts_api_key: localStorage.getItem('googleCloudTTSApiKey') || '',
+                    webhook_url: localStorage.getItem('learner_webhook_base_url') || '',
+                    sheet_id: localStorage.getItem('learner_sheet_id') || '',
+                    videos_gid: localStorage.getItem('learner_videos_gid') || '',
+                    notes_gid: localStorage.getItem('learner_notes_gid') || ''
+                };
+                const json = JSON.stringify(config, null, 2);
+                navigator.clipboard.writeText(json).then(() => {
+                    const originalText = copyBulkBtn.textContent;
+                    copyBulkBtn.textContent = 'Copied!';
+                    setTimeout(() => copyBulkBtn.textContent = originalText, 2000);
+                });
             });
 
-            applyBulkBtn.addEventListener('click', () => {
+            applyBulkBtn.addEventListener('click', async () => {
                 try {
-                    const config = JSON.parse(bulkTextarea.value);
-                    if (config.tts_api_key !== undefined) document.getElementById('unified-api-key-input').value = config.tts_api_key;
-                    if (config.webhook_url !== undefined) document.getElementById('unified-webhook-input').value = config.webhook_url;
-                    if (config.sheet_id !== undefined) document.getElementById('unified-sheet-id-input').value = config.sheet_id;
-                    if (config.videos_gid !== undefined) document.getElementById('unified-videos-gid-input').value = config.videos_gid;
-                    if (config.notes_gid !== undefined) document.getElementById('unified-notes-gid-input').value = config.notes_gid;
-                    alert('Configuration applied to fields above. Click "Save & Reload" to commit.');
+                    const text = await navigator.clipboard.readText();
+                    const config = JSON.parse(text);
+
+                    if (config.tts_api_key !== undefined) localStorage.setItem('googleCloudTTSApiKey', config.tts_api_key);
+                    if (config.webhook_url !== undefined) localStorage.setItem('learner_webhook_base_url', config.webhook_url);
+                    if (config.sheet_id !== undefined) localStorage.setItem('learner_sheet_id', config.sheet_id);
+                    if (config.videos_gid !== undefined) localStorage.setItem('learner_videos_gid', config.videos_gid);
+                    if (config.notes_gid !== undefined) localStorage.setItem('learner_notes_gid', config.notes_gid);
+
+                    alert('Configuration applied successfully! Reloading...');
+                    window.location.reload();
                 } catch (e) {
-                    alert('Invalid JSON format. Please check your configuration.');
+                    alert('Failed to apply config. Please ensure you have a valid JSON object in your clipboard. Error: ' + e.message);
                 }
             });
 
