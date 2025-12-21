@@ -1694,6 +1694,9 @@
         window.sharedAudio = new Audio();
         window.sharedAudio._unlocked = false;
 
+        // Track the current active button for audio control (including lock screen)
+        window.currentAudioButton = null;
+
         function getSharedAudio() {
             const audio = window.sharedAudio;
             // Clear all possible dynamic listeners before reuse
@@ -1706,18 +1709,112 @@
             return audio;
         }
 
+        // Function to update the Media Session API for lock screen and hardware controls
+        function updateMediaSession(button) {
+            if (!('mediaSession' in navigator)) return;
+
+            if (!button) {
+                navigator.mediaSession.playbackState = 'none';
+                return;
+            }
+
+            const post = button.postData;
+            const isPlaying = button.speechState.isPlaying && !button.speechState.isPaused;
+
+            // Set metadata
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: post.title || (post.tabType === 'notes' ? formatDate(post.addedAt, true) : 'Untitled'),
+                artist: 'Learner',
+                album: 'Learner Audio',
+                artwork: [
+                    { src: 'https://img.icons8.com/fluency/240/learning.png', sizes: '240x240', type: 'image/png' }
+                ]
+            });
+
+            // Set playback state
+            navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+            // Register action handlers
+            navigator.mediaSession.setActionHandler('play', () => {
+                console.log('Media Session: play (AirPod/Lockscreen)');
+                if (button.speechState.isPaused || !button.speechState.isPlaying) {
+                    toggleSpeech(button);
+                }
+            });
+
+            navigator.mediaSession.setActionHandler('pause', () => {
+                console.log('Media Session: pause (AirPod/Lockscreen)');
+                if (button.speechState.isPlaying && !button.speechState.isPaused) {
+                    toggleSpeech(button);
+                }
+            });
+
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                console.log('Media Session: previoustrack');
+                const prevBtn = document.getElementById('floating-prev');
+                if (prevBtn) prevBtn.click();
+            });
+
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                console.log('Media Session: nexttrack');
+                const nextBtn = document.getElementById('floating-next');
+                if (nextBtn) nextBtn.click();
+            });
+        }
+
+        // Listen for hardware/system pause events to keep UI in sync
+        window.sharedAudio.addEventListener('pause', () => {
+            if (window.currentAudioButton) {
+                const button = window.currentAudioButton;
+                const state = button.speechState;
+                if (state.isPlaying && !state.isPaused) {
+                    console.log('Audio element paused externally (system/hardware)');
+                    state.isPlaying = false;
+                    state.isPaused = true;
+                    button.classList.remove('playing');
+                    button.classList.add('paused');
+                    button.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="5,3 19,12 5,21" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                    `;
+                    updateFloatingMarkState();
+                    updateMediaSession(button);
+                }
+            }
+        });
+
+        window.sharedAudio.addEventListener('play', () => {
+            if (window.currentAudioButton) {
+                const button = window.currentAudioButton;
+                const state = button.speechState;
+                if (!state.isPlaying && state.isPaused) {
+                    console.log('Audio element played externally (system/hardware)');
+                    state.isPlaying = true;
+                    state.isPaused = false;
+                    button.classList.remove('paused');
+                    button.classList.add('playing');
+                    button.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                            <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                        </svg>
+                    `;
+                    updateFloatingMarkState();
+                    updateMediaSession(button);
+                }
+            }
+        });
+
         // Function to unlock audio on first human interaction
         function unlockAudio() {
             if (!window.sharedAudio._unlocked) {
                 console.log('Unlocking audio context...');
-                // Playing a silent 1ms buffer is often needed on mobile/safari
-                // but any .play() on a human click usually works.
                 window.sharedAudio.play().then(() => {
                     window.sharedAudio.pause();
                     window.sharedAudio._unlocked = true;
                     console.log('Audio context unlocked');
                 }).catch(e => {
-                    // This might fail if called outside a gesture, which is fine
                     console.log('Audio unlock deferred:', e.message);
                 });
             }
@@ -1731,6 +1828,7 @@
                 window.sharedAudio.src = '';
                 window.sharedAudio._unlocked = false;
             }
+            window.currentAudioButton = null;
         });
 
         // Global callback function for JSONP
@@ -3406,6 +3504,7 @@
 
             // Stop all other playing audio first
             stopAllOtherAudio(button);
+            window.currentAudioButton = button;
 
             if (speechState.isPlaying) {
                 // Track play time before pausing
@@ -3433,6 +3532,7 @@
                     </svg>
                 `;
                 updateFloatingMarkState();
+                updateMediaSession(button);
             } else if (speechState.isPaused) {
                 // Track start time on resume
                 speechState.lastPlayStartTime = performance.now();
@@ -3457,6 +3557,7 @@
                     </svg>
                 `;
                 updateFloatingMarkState();
+                updateMediaSession(button);
             } else {
                 // Check if API key is configured
                 if (!GOOGLE_CLOUD_TTS_CONFIG.apiKey) {
@@ -3556,6 +3657,7 @@
 
                         // Update floating mark button to show pause icon
                         updateFloatingMarkState();
+                        updateMediaSession(button);
 
                         // Set up text tracking for single audio
                         if (contentDiv && contentDiv._totalChars) {
@@ -4372,6 +4474,12 @@
                 button.speechState.isPlaying = false;
                 button.speechState.isPaused = false;
             }
+
+            if (window.currentAudioButton === button) {
+                window.currentAudioButton = null;
+                updateMediaSession(null);
+            }
+
             button.classList.remove('playing', 'loading', 'paused');
             button.innerHTML = `
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
