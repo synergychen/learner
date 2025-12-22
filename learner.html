@@ -1681,7 +1681,6 @@
 
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq=&gid=${VIDEOS_GID}`;
         const NOTES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&tq=&gid=${NOTES_GID}`;
-        const LLM_ENDPOINT_ID = '2e848042-80e0-4745-8634-ed567dd325c6';
 
         // Data caching system
         let cachedData = {
@@ -2534,7 +2533,7 @@
             }
 
             const archivedFlag = isArchived ? 1 : 0;
-            const webhookUrl = `${baseUrl}${LLM_ENDPOINT_ID}`;
+            const webhookUrl = `${baseUrl}19e8e145-f9fb-4b1c-aae9-13d0b91c83a6`;
 
             fetch(webhookUrl, {
                 method: 'POST',
@@ -2587,7 +2586,7 @@
             }
 
             const starFlag = shouldStar ? 1 : 0;
-            const webhookUrl = `${baseUrl}${LLM_ENDPOINT_ID}`;
+            const webhookUrl = `${baseUrl}0e0309d6-1c6c-4edf-baab-3205a01e9224`;
 
             return fetch(webhookUrl, {
                 method: 'POST',
@@ -2685,7 +2684,7 @@
                 return Promise.reject('Webhook URL not configured');
             }
 
-            const webhookUrl = `${baseUrl}${LLM_ENDPOINT_ID}`;
+            const webhookUrl = `${baseUrl}7bda285f-8e6a-4519-a58d-836fc62ff4b2`;
 
             return fetch(webhookUrl, {
                 method: 'POST',
