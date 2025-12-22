@@ -2541,10 +2541,8 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    body: {
-                        id: noteId,
-                        archived: archivedFlag
-                    }
+                    id: noteId,
+                    archived: archivedFlag
                 })
             })
             .then(response => {
@@ -2594,10 +2592,8 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    body: {
-                        id: noteId,
-                        star: starFlag
-                    }
+                    id: noteId,
+                    star: starFlag
                 })
             }).then(response => {
                 if (!response.ok) {
@@ -2692,10 +2688,8 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    body: {
-                        url: videoUrl,
-                        read: readStatus
-                    }
+                    url: videoUrl,
+                    read: readStatus
                 })
             })
             .then(response => {
