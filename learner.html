@@ -2533,10 +2533,19 @@
             }
 
             const archivedFlag = isArchived ? 1 : 0;
-            const webhookUrl = `${baseUrl}19e8e145-f9fb-4b1c-aae9-13d0b91c83a6?id=${encodeURIComponent(noteId)}&archived=${archivedFlag}`;
+            const webhookUrl = `${baseUrl}19e8e145-f9fb-4b1c-aae9-13d0b91c83a6`;
 
             fetch(webhookUrl, {
-                method: 'GET'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    body: {
+                        id: noteId,
+                        archived: archivedFlag
+                    }
+                })
             })
             .then(response => {
                 if (response.ok) {
@@ -2577,10 +2586,19 @@
             }
 
             const starFlag = shouldStar ? 1 : 0;
-            const webhookUrl = `${baseUrl}0e0309d6-1c6c-4edf-baab-3205a01e9224?id=${encodeURIComponent(noteId)}&star=${starFlag}`;
+            const webhookUrl = `${baseUrl}0e0309d6-1c6c-4edf-baab-3205a01e9224`;
 
             return fetch(webhookUrl, {
-                method: 'GET'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    body: {
+                        id: noteId,
+                        star: starFlag
+                    }
+                })
             }).then(response => {
                 if (!response.ok) {
                     throw new Error(`Star webhook failed with status ${response.status}`);
