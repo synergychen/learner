@@ -2666,10 +2666,19 @@
                 return Promise.reject('Webhook URL not configured');
             }
 
-            const webhookUrl = `${baseUrl}7bda285f-8e6a-4519-a58d-836fc62ff4b2?url=${encodeURIComponent(videoUrl)}&read=${readStatus}`;
+            const webhookUrl = `${baseUrl}7bda285f-8e6a-4519-a58d-836fc62ff4b2`;
 
             return fetch(webhookUrl, {
-                method: 'GET'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    body: {
+                        url: videoUrl,
+                        read: readStatus
+                    }
+                })
             })
             .then(response => {
                 if (response.ok) {
