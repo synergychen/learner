@@ -2686,7 +2686,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    message: `mark video ${videoUrl} as ${readStatus}`
+                    message: `mark video ${videoUrl} as ${readStatus === 1 ? 'read' : 'unread'}`
                 })
             })
             .then(response => {
