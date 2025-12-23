@@ -2533,7 +2533,7 @@
             }
 
             const archivedFlag = isArchived ? 1 : 0;
-            const webhookUrl = `${baseUrl}19e8e145-f9fb-4b1c-aae9-13d0b91c83a6`;
+            const webhookUrl = `${baseUrl}agent/next_steps`;
 
             fetch(webhookUrl, {
                 method: 'POST',
@@ -2541,8 +2541,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    id: noteId,
-                    archived: archivedFlag
+                    message: `mark note ${noteId} as ${isArchived ? 'archived' : 'unarchived'}`
                 })
             })
             .then(response => {
@@ -2680,7 +2679,7 @@
                 return Promise.reject('Webhook URL not configured');
             }
 
-            const webhookUrl = `${baseUrl}7bda285f-8e6a-4519-a58d-836fc62ff4b2`;
+            const webhookUrl = `${baseUrl}agent/next_steps`;
 
             return fetch(webhookUrl, {
                 method: 'POST',
@@ -2688,8 +2687,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    url: videoUrl,
-                    read: readStatus
+                    message: `mark video ${videoUrl} as ${readStatus}`
                 })
             })
             .then(response => {
