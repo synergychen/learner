@@ -2583,7 +2583,7 @@
             }
 
             const starFlag = shouldStar ? 1 : 0;
-            const webhookUrl = `${baseUrl}0e0309d6-1c6c-4edf-baab-3205a01e9224`;
+            const webhookUrl = `${baseUrl}agent/next_steps`;
 
             return fetch(webhookUrl, {
                 method: 'POST',
@@ -2591,8 +2591,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    id: noteId,
-                    star: starFlag
+                    message: `mark note ${noteId} as ${shouldStar ? 'starred' : 'unstarred'}`
                 })
             }).then(response => {
                 if (!response.ok) {
