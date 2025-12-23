@@ -2520,8 +2520,8 @@
         // Call archive webhook for Notes
         // Call archive webhook for Notes
         function callArchiveWebhook(noteId, isArchived) {
-            const baseUrl = localStorage.getItem('learner_webhook_base_url');
-            if (!baseUrl) {
+            const webhookUrl = localStorage.getItem('learner_webhook_base_url');
+            if (!webhookUrl) {
                 console.warn('Webhook base URL not configured. Action will be local only.');
                 showOfflineNotification('Webhook URL missing. Configure in settings.');
                 return;
@@ -2533,7 +2533,6 @@
             }
 
             const archivedFlag = isArchived ? 1 : 0;
-            const webhookUrl = `${baseUrl}agent/next_steps`;
 
             fetch(webhookUrl, {
                 method: 'POST',
@@ -2575,15 +2574,14 @@
         }
 
         function callStarWebhook(noteId, shouldStar) {
-            const baseUrl = localStorage.getItem('learner_webhook_base_url');
-            if (!baseUrl) {
+            const webhookUrl = localStorage.getItem('learner_webhook_base_url');
+            if (!webhookUrl) {
                 console.warn('Webhook base URL not configured. Action will be local only.');
                 showOfflineNotification('Webhook URL missing. Configure in settings.');
                 return Promise.reject('Webhook URL not configured');
             }
 
             const starFlag = shouldStar ? 1 : 0;
-            const webhookUrl = `${baseUrl}agent/next_steps`;
 
             return fetch(webhookUrl, {
                 method: 'POST',
@@ -2671,14 +2669,12 @@
 
         // Direct webhook call that returns a promise
         function callWebhookDirect(videoUrl, readStatus) {
-            const baseUrl = localStorage.getItem('learner_webhook_base_url');
-            if (!baseUrl) {
+            const webhookUrl = localStorage.getItem('learner_webhook_base_url');
+            if (!webhookUrl) {
                 console.warn('Webhook base URL not configured.');
                 showOfflineNotification('Webhook URL missing. Configure in settings.');
                 return Promise.reject('Webhook URL not configured');
             }
-
-            const webhookUrl = `${baseUrl}agent/next_steps`;
 
             return fetch(webhookUrl, {
                 method: 'POST',
