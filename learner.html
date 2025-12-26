@@ -1742,8 +1742,32 @@
                     request.onsuccess = () => resolve();
                     request.onerror = () => reject(request.error);
                 });
+            },
+            async delete(store, key) {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(store, 'readwrite');
+                    const request = tx.objectStore(store).delete(key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
             }
         };
+
+        async function removeAudioFromCache(postDiv) {
+            const listenBtn = postDiv.querySelector('.listen-btn');
+            if (!listenBtn) return;
+            try {
+                const text = getSpeechText(listenBtn);
+                const useChinese = containsChinese(text);
+                const voice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+                const cacheKey = await hashText(text + voice.languageCode + voice.ssmlGender);
+                await AppCache.delete(STORES.AUDIO, cacheKey);
+                console.log('%c🗑 Audio removed from IndexedDB (post read/archived)', 'color: #f44336');
+            } catch (e) {
+                console.error('Failed to remove audio from cache:', e);
+            }
+        }
 
         async function hashText(text) {
             const encoder = new TextEncoder();
@@ -2484,6 +2508,9 @@
                 // Preload next post audio
                 preloadNextPostAudio(postDiv);
 
+                // Remove audio from cache when marking as read
+                removeAudioFromCache(postDiv);
+
                 // Scroll to next post after marking as read
                 setTimeout(() => {
                     scrollToNextPost(postDiv);
@@ -2534,6 +2561,9 @@
                 // Preload next post audio
                 preloadNextPostAudio(postDiv);
 
+                // Remove audio from cache when marking as read
+                removeAudioFromCache(postDiv);
+
                 // Scroll to next post after marking as read
                 setTimeout(() => {
                     scrollToNextPost(postDiv);
@@ -2579,6 +2609,9 @@
                 if (post.noteId) {
                     callArchiveWebhook(post.noteId, true);
                 }
+
+                // Remove audio from cache when marking as archived
+                removeAudioFromCache(postDiv);
 
                 console.log('Note archived');
 
