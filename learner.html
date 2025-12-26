@@ -1414,6 +1414,37 @@
         body.dark-mode .tab-item.active {
             background: #000;
         }
+
+        .sync-status-indicator {
+            font-size: 10px;
+            color: #6a78f8;
+            margin-right: 12px;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            background: rgba(106, 120, 248, 0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .sync-status-indicator.active {
+            display: flex;
+        }
+
+        .sync-spinner {
+            width: 10px;
+            height: 10px;
+            border: 2px solid rgba(106, 120, 248, 0.3);
+            border-top-color: #6a78f8;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: sync-spin 1s linear infinite;
+        }
+
+        @keyframes sync-spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -1428,6 +1459,10 @@
                     <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
                 </svg>
             </button>
+        </div>
+        <div class="sync-status-indicator" id="header-sync-status">
+            <div class="sync-spinner"></div>
+            <span id="sync-status-text">Syncing...</span>
         </div>
         <div class="header-progress" id="header-progress"></div>
         <button class="header-menu" id="header-menu" title="Settings">
@@ -2413,11 +2448,52 @@
         async function loadPosts() {
             await renderTabContent('videos');
 
+            // Initial sync check
+            updateSyncStatusDisplay();
+
             // Auto preload if enabled
             if (localStorage.getItem('learner_auto_preload') === 'true' && isOnline) {
                 console.log('Auto-preloading all posts as per setting...');
-                // Use a small delay to ensure page is ready
                 setTimeout(() => syncAllForOffline(), 1000);
+            }
+        }
+
+        async function updateSyncStatusDisplay() {
+            try {
+                const [videos, notes] = await Promise.all([
+                    getAllPostsSync('videos'),
+                    getAllPostsSync('notes')
+                ]);
+
+                const allUnread = [...videos, ...notes].filter(p => {
+                    if (p.tabType === 'videos') return !p.isRead;
+                    if (p.tabType === 'notes') return !p.isArchived;
+                    return false;
+                });
+
+                let syncedCount = 0;
+                for (const post of allUnread) {
+                    const text = getPostSpeechText(post);
+                    const useChinese = containsChinese(text);
+                    const voice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+                    const cacheKey = await hashText(text + voice.languageCode + voice.ssmlGender);
+                    const cached = await AppCache.get(STORES.AUDIO, cacheKey);
+                    if (cached && cached.status === 'done') syncedCount++;
+                }
+
+                const indicator = document.getElementById('header-sync-status');
+                const textSpan = document.getElementById('sync-status-text');
+                const spinner = indicator.querySelector('.sync-spinner');
+
+                if (allUnread.length > 0) {
+                    indicator.classList.add('active');
+                    textSpan.textContent = `${syncedCount}/${allUnread.length} Synced`;
+                    spinner.style.display = syncedCount === allUnread.length ? 'none' : 'block';
+                } else {
+                    indicator.classList.remove('active');
+                }
+            } catch (e) {
+                console.error('Failed to update sync status display:', e);
             }
         }
 
@@ -2983,11 +3059,13 @@
                 const total = allUnread.length;
                 if (total === 0) {
                     notification.textContent = 'All posts are already synced!';
+                    updateSyncStatusDisplay();
                     setTimeout(() => notification.remove(), 2000);
                     return;
                 }
 
                 notification.textContent = `Syncing ${total} posts for offline...`;
+                document.getElementById('header-sync-status').classList.add('active');
 
                 let synched = 0;
                 let failed = 0;
@@ -3003,6 +3081,7 @@
                         const cached = await AppCache.get(STORES.AUDIO, cacheKey);
                         if (cached && cached.status === 'done') {
                             synched++;
+                            updateSyncStatusText(synched, total);
                             continue;
                         }
 
@@ -3020,6 +3099,7 @@
 
                         synched++;
                         notification.textContent = `Syncing: ${synched}/${total}...`;
+                        updateSyncStatusText(synched, total);
                         // Small buffer to avoid hitting API rate limits too hard
                         await new Promise(r => setTimeout(r, 500));
                     } catch (e) {
@@ -3029,6 +3109,7 @@
                 }
 
                 notification.textContent = `Sync complete! ${synched} ready. ${failed ? failed + ' failed.' : ''}`;
+                updateSyncStatusDisplay();
             } catch (error) {
                 console.error('Sync failed:', error);
                 notification.textContent = 'Sync failed. Check connection.';
@@ -3038,6 +3119,17 @@
                 notification.classList.remove('show');
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
+        }
+
+        function updateSyncStatusText(current, total) {
+            const textSpan = document.getElementById('sync-status-text');
+            const spinner = document.querySelector('#header-sync-status .sync-spinner');
+            if (textSpan) {
+                textSpan.textContent = `${current}/${total} Synced`;
+            }
+            if (spinner) {
+                spinner.style.display = current === total ? 'none' : 'block';
+            }
         }
 
         // Search functionality
