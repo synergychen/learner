@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Learner">
+    <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
@@ -1545,6 +1546,17 @@
                     </svg>
                 </div>
             </div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="sync-offline-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Sync All for Offline
+                </div>
+            </div>
         </div>
 
         <!-- Unified App Configuration Modal -->
@@ -1687,6 +1699,59 @@
             videos: null,
             notes: null
         };
+
+        // IndexedDB Cache System
+        const DB_NAME = 'LearnerCache';
+        const DB_VERSION = 1;
+        const STORES = {
+            DATA: 'data_cache',
+            AUDIO: 'audio_cache'
+        };
+
+        const AppCache = {
+            db: null,
+            init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(STORES.DATA)) db.createObjectStore(STORES.DATA);
+                        if (!db.objectStoreNames.contains(STORES.AUDIO)) db.createObjectStore(STORES.AUDIO);
+                    };
+                    request.onsuccess = (e) => {
+                        this.db = e.target.result;
+                        resolve();
+                    };
+                    request.onerror = (e) => reject(e);
+                });
+            },
+            async get(store, key) {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(store, 'readonly');
+                    const request = tx.objectStore(store).get(key);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            async set(store, key, value) {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(store, 'readwrite');
+                    const request = tx.objectStore(store).put(value, key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+        };
+
+        async function hashText(text) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
         let currentTab = 'videos'; // Default tab
 
@@ -2141,8 +2206,21 @@
             const url = tabType === 'videos' ? SHEET_URL : NOTES_URL;
 
             try {
-                const data = await loadDataWithJSONP(url);
-                // Cache the data
+                // Try network first, then fallback to DB
+                let data = null;
+                try {
+                    data = await loadDataWithJSONP(url);
+                    // Update persistent cache
+                    await AppCache.set(STORES.DATA, tabType, data);
+                    console.log(`Updated ${tabType} cache in IndexedDB`);
+                } catch (networkError) {
+                    console.warn(`Network failed for ${tabType}, trying IndexedDB cache:`, networkError);
+                    data = await AppCache.get(STORES.DATA, tabType);
+                    if (!data) throw networkError;
+                    showOfflineNotification(`Using cached ${tabType} data (offline)`);
+                }
+
+                // Cache the data in memory
                 cachedData[tabType] = data;
                 return data;
             } catch (error) {
@@ -2518,7 +2596,6 @@
         }
 
         // Call archive webhook for Notes
-        // Call archive webhook for Notes
         function callArchiveWebhook(noteId, isArchived) {
             const webhookUrl = localStorage.getItem('learner_webhook_base_url');
             if (!webhookUrl) {
@@ -2747,7 +2824,7 @@
                 notification.remove();
             }, 3000);
         }
-        function showSyncNotification() {
+        function showSyncNotification(message = 'Synced', duration = 1500) {
             // Remove any existing notification
             const existingNotification = document.querySelector('.sync-notification');
             if (existingNotification) {
@@ -2757,7 +2834,7 @@
             // Create new notification
             const notification = document.createElement('div');
             notification.className = 'sync-notification';
-            notification.textContent = 'Synced';
+            notification.textContent = message;
             document.body.appendChild(notification);
 
             // Show notification
@@ -2765,13 +2842,59 @@
                 notification.classList.add('show');
             }, 10);
 
-            // Hide and remove notification after 1 second
+            // Hide and remove notification after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 300);
+                }, duration);
+            }
+            return notification;
+        }
+
+        async function syncAllForOffline() {
+            const allPosts = Array.from(document.querySelectorAll('.blog-post')).filter(p => !p.classList.contains('read'));
+            const total = allPosts.length;
+            if (total === 0) {
+                showSyncNotification('No unread posts to sync.');
+                return;
+            }
+
+            const notification = showSyncNotification(`Syncing ${total} posts for offline...`, 0);
+
+            let synched = 0;
+            let failed = 0;
+
+            for (const post of allPosts) {
+                const listenBtn = post.querySelector('.listen-btn');
+                if (listenBtn) {
+                    try {
+                        const text = getSpeechText(listenBtn);
+                        const useChinese = containsChinese(text);
+                        const voice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+                        const cacheKey = await hashText(text + voice.languageCode + voice.ssmlGender);
+                        const cached = await AppCache.get(STORES.AUDIO, cacheKey);
+
+                        if (!cached) {
+                            await preloadSpeech(listenBtn);
+                            await new Promise(r => setTimeout(r, 500)); // Rate limiting
+                        }
+                        synched++;
+                        notification.textContent = `Syncing: ${synched}/${total}...`;
+                    } catch (e) {
+                        console.error('Failed to sync post:', e);
+                        failed++;
+                    }
+                }
+            }
+
+            notification.textContent = `Sync complete! ${synched} ready. ${failed ? failed + ' failed.' : ''}`;
             setTimeout(() => {
                 notification.classList.remove('show');
-                setTimeout(() => {
-                    notification.remove();
-                }, 300);
-            }, 1000);
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
 
         // Search functionality
@@ -4012,21 +4135,37 @@
         async function synthesizeSpeech(text) {
             // Detect language and choose appropriate voice
             const useChinese = containsChinese(text);
-            console.log('Using Chinese voice:', useChinese);
             const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
-            console.log('Selected voice:', selectedVoice);
+
+            // Check IndexedDB cache first
+            const cacheKey = await hashText(text + selectedVoice.languageCode + selectedVoice.ssmlGender);
+            const cachedAudio = await AppCache.get(STORES.AUDIO, cacheKey);
+
+            if (cachedAudio) {
+                console.log('%c⚡ Using cached audio from IndexedDB', 'color: #4CAF50; font-weight: bold');
+                return cachedAudio;
+            }
 
             // Check text length to determine approach
             const textBytes = new TextEncoder().encode(text).length;
             console.log('Text length in bytes:', textBytes);
 
+            let result;
             if (textBytes <= GOOGLE_CLOUD_TTS_CONFIG.maxTextBytes) {
                 console.log('Using single API call');
-                return await synthesizeShortAudio(text, selectedVoice);
+                result = await synthesizeShortAudio(text, selectedVoice);
             } else {
                 console.log('Using chunked synthesis for long text');
-                return await synthesizeChunkedAudio(text, selectedVoice);
+                result = await synthesizeChunkedAudio(text, selectedVoice);
             }
+
+            // Save to cache if it's a small result (chunked handles its own caching or we save the whole thing)
+            // For now, only cache short audio results this way. Chunked is complex.
+            if (typeof result === 'string') {
+                await AppCache.set(STORES.AUDIO, cacheKey, result);
+            }
+
+            return result;
         }
 
         // Function for short audio synthesis (original API)
@@ -4095,11 +4234,16 @@
                 isProcessing: true
             };
 
+            // Assign cache key for saving later
+            streamingResult.cacheKey = await hashText(text + voice.languageCode + voice.ssmlGender);
+
             // Process remaining chunks in background if there are more
             if (chunks.length > 1) {
                 processRemainingChunks(streamingResult, chunks.slice(1), voice);
             } else {
                 streamingResult.isProcessing = false;
+                // Save single-chunk streaming result to cache
+                await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, streamingResult);
             }
 
             return streamingResult;
@@ -4143,6 +4287,12 @@
             const totalElapsed = ((performance.now() - totalStart) / 1000).toFixed(1);
             streamingResult.isProcessing = false;
             console.log(`%c🎵 All ${streamingResult.totalChunks} chunks ready`, 'font-weight: bold; color: #4CAF50', `(total: ${totalElapsed}s)`);
+
+            // Save completed chunked synthesis to persistent cache
+            if (streamingResult.cacheKey) {
+                await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, streamingResult);
+                console.log('%c💾 Saved chunked audio to IndexedDB', 'color: #9E9E9E');
+            }
         }
 
         // Function to split text into chunks with progressive byte limits
@@ -4574,10 +4724,15 @@
                 setTimeout(() => window.location.reload(), 200);
             });
 
-            // Unified App Configuration
             appConfigMenuItem.addEventListener('click', () => {
                 closeMenu();
                 showUnifiedSettingsModal();
+            });
+
+            // Sync for Offline
+            document.getElementById('sync-offline-item').addEventListener('click', async () => {
+                closeMenu();
+                await syncAllForOffline();
             });
 
             // Font size controls

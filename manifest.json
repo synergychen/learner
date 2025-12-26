@@ -1,0 +1,21 @@
+{
+  "name": "Learner",
+  "short_name": "Learner",
+  "description": "Smart learning assistant with TTS and video summaries",
+  "start_url": "./learner.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#071df5",
+  "icons": [
+    {
+      "src": "https://i.imgur.com/nXRkDYO.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://i.imgur.com/nXRkDYO.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
