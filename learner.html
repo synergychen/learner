@@ -1521,6 +1521,19 @@
                     <div class="theme-toggle-slider"></div>
                 </div>
             </div>
+            <div class="menu-item" id="auto-preload-item">
+                <div class="menu-item-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Auto Preload All
+                </div>
+                <div class="theme-toggle" id="auto-preload-toggle">
+                    <div class="theme-toggle-slider"></div>
+                </div>
+            </div>
             <div class="menu-item" id="sync-menu-item">
                 <div class="menu-item-label">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2399,6 +2412,13 @@
         // Initialize with default tab (videos)
         async function loadPosts() {
             await renderTabContent('videos');
+
+            // Auto preload if enabled
+            if (localStorage.getItem('learner_auto_preload') === 'true' && isOnline) {
+                console.log('Auto-preloading all posts as per setting...');
+                // Use a small delay to ensure page is ready
+                setTimeout(() => syncAllForOffline(), 1000);
+            }
         }
 
         function toggleCollapse(postDiv) {
@@ -4172,12 +4192,17 @@
 
             // Check IndexedDB cache first
             const cacheKey = await hashText(text + selectedVoice.languageCode + selectedVoice.ssmlGender);
-            const cachedAudio = await AppCache.get(STORES.AUDIO, cacheKey);
+            const cachedEntry = await AppCache.get(STORES.AUDIO, cacheKey);
 
-            if (cachedAudio) {
+            if (cachedEntry && cachedEntry.status === 'done') {
                 console.log('%c⚡ Using cached audio from IndexedDB', 'color: #4CAF50; font-weight: bold');
-                return cachedAudio;
+                return cachedEntry.data;
+            } else if (cachedEntry && cachedEntry.status === 'in_progress') {
+                console.log('%c⏳ Previous synthesis was incomplete, restarting...', 'color: #FF9800');
             }
+
+            // Mark as in-progress in cache
+            await AppCache.set(STORES.AUDIO, cacheKey, { status: 'in_progress', data: null });
 
             // Check text length to determine approach
             const textBytes = new TextEncoder().encode(text).length;
@@ -4192,10 +4217,9 @@
                 result = await synthesizeChunkedAudio(text, selectedVoice);
             }
 
-            // Save to cache if it's a small result (chunked handles its own caching or we save the whole thing)
-            // For now, only cache short audio results this way. Chunked is complex.
+            // Save to cache if it's a small result
             if (typeof result === 'string') {
-                await AppCache.set(STORES.AUDIO, cacheKey, result);
+                await AppCache.set(STORES.AUDIO, cacheKey, { status: 'done', data: result });
             }
 
             return result;
@@ -4276,7 +4300,7 @@
             } else {
                 streamingResult.isProcessing = false;
                 // Save single-chunk streaming result to cache
-                await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, streamingResult);
+                await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, { status: 'done', data: streamingResult });
             }
 
             return streamingResult;
@@ -4323,7 +4347,7 @@
 
             // Save completed chunked synthesis to persistent cache
             if (streamingResult.cacheKey) {
-                await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, streamingResult);
+                await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, { status: 'done', data: streamingResult });
                 console.log('%c💾 Saved chunked audio to IndexedDB', 'color: #9E9E9E');
             }
         }
@@ -4840,6 +4864,22 @@
                 window.continuousPlayEnabled = !window.continuousPlayEnabled;
                 continuousPlayToggle.classList.toggle('dark', window.continuousPlayEnabled);
                 localStorage.setItem('learner_continuous_play', window.continuousPlayEnabled);
+            });
+
+            // Auto Preload toggle
+            const autoPreloadToggle = document.getElementById('auto-preload-toggle');
+            const autoPreloadItem = document.getElementById('auto-preload-item');
+
+            // Load saved setting - default to false (off)
+            window.autoPreloadEnabled = localStorage.getItem('learner_auto_preload') === 'true';
+            if (window.autoPreloadEnabled) {
+                autoPreloadToggle.classList.add('dark');
+            }
+
+            autoPreloadItem.addEventListener('click', () => {
+                window.autoPreloadEnabled = !window.autoPreloadEnabled;
+                autoPreloadToggle.classList.toggle('dark', window.autoPreloadEnabled);
+                localStorage.setItem('learner_auto_preload', window.autoPreloadEnabled);
             });
         }
 
