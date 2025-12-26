@@ -2291,26 +2291,50 @@
 
         function loadDataWithJSONP(url) {
             return new Promise((resolve, reject) => {
-                // Create a global callback function that Google Sheets will call
-                window.google = window.google || {};
-                window.google.visualization = window.google.visualization || {};
-                window.google.visualization.Query = window.google.visualization.Query || {};
-                window.google.visualization.Query.setResponse = function(response) {
+                // Create a unique callback name for this specific request
+                const callbackId = 'cb' + Math.floor(Math.random() * 1000000);
+                const callbackName = `handleGoogleSheetsResponse_${callbackId}`;
+
+                // Define the cleanup function
+                const cleanup = () => {
+                    delete window[callbackName];
+                    const script = document.getElementById(callbackId);
+                    if (script) script.remove();
+                };
+
+                window[callbackName] = function(response) {
+                    cleanup();
                     resolve(response);
                 };
 
                 const script = document.createElement('script');
-                script.src = url;
-                script.onerror = () => {
-                    document.head.removeChild(script);
-                    reject(new Error('Failed to load data'));
-                };
+                script.id = callbackId;
 
-                script.onload = () => {
-                    document.head.removeChild(script);
+                // Construct the URL with the custom response handler
+                let finalUrl = url;
+                if (finalUrl.includes('tqx=out:json')) {
+                    finalUrl = finalUrl.replace('tqx=out:json', `tqx=out:json;responseHandler:${callbackName}`);
+                } else if (finalUrl.includes('?')) {
+                    finalUrl += `&tqx=responseHandler:${callbackName}`;
+                } else {
+                    finalUrl += `?tqx=responseHandler:${callbackName}`;
+                }
+
+                script.src = finalUrl;
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('Failed to load data from network'));
                 };
 
                 document.head.appendChild(script);
+
+                // Safety timeout
+                setTimeout(() => {
+                    if (window[callbackName]) {
+                        cleanup();
+                        reject(new Error('Data request timed out'));
+                    }
+                }, 10000);
             });
         }
 
@@ -2352,10 +2376,23 @@
             const noPostsElement = document.getElementById('no-posts');
 
             const updateUI = async (data) => {
-                if (!data.table || !data.table.rows) return;
+                if (!data || !data.table || !data.table.rows) {
+                    console.warn(`Empty or invalid data received for ${tabType}`);
+                    // If we already have items displayed, don't wipe them out with a bad update
+                    if (container.children.length === 0) {
+                        loadingElement.style.display = 'none';
+                        noPostsElement.style.display = 'block';
+                    }
+                    return;
+                }
 
                 const rows = data.table.rows;
                 const cols = data.table.cols;
+
+                // Log column labels to help debug if they are missing
+                const columnLabels = cols.map(c => c.label ? c.label.toLowerCase() : '');
+                console.log(`Column labels for ${tabType}:`, columnLabels);
+
                 const columnMap = {};
                 cols.forEach((col, index) => { if (col.label) columnMap[col.label.toLowerCase()] = index; });
 
