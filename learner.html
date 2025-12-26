@@ -1563,7 +1563,7 @@
                         <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    Auto Preload All
+                    Preload Audios
                 </div>
                 <div class="theme-toggle" id="auto-preload-toggle">
                     <div class="theme-toggle-slider"></div>
@@ -2461,7 +2461,7 @@
 
             // Auto preload if enabled
             if (localStorage.getItem('learner_auto_preload') === 'true' && isOnline) {
-                console.log('Auto-preloading all posts as per setting...');
+                console.log('Preloading all audios as per setting...');
                 setTimeout(() => syncAllForOffline(), 1000);
             }
         }
