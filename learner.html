@@ -1414,37 +1414,6 @@
         body.dark-mode .tab-item.active {
             background: #000;
         }
-
-        .sync-status-indicator {
-            font-size: 10px;
-            color: #6a78f8;
-            margin-right: 12px;
-            font-weight: 600;
-            display: none;
-            align-items: center;
-            background: rgba(106, 120, 248, 0.1);
-            padding: 2px 8px;
-            border-radius: 12px;
-            white-space: nowrap;
-        }
-
-        .sync-status-indicator.active {
-            display: flex;
-        }
-
-        .sync-spinner {
-            width: 10px;
-            height: 10px;
-            border: 2px solid rgba(106, 120, 248, 0.3);
-            border-top-color: #6a78f8;
-            border-radius: 50%;
-            margin-right: 6px;
-            animation: sync-spin 1s linear infinite;
-        }
-
-        @keyframes sync-spin {
-            to { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
@@ -1459,10 +1428,6 @@
                     <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
                 </svg>
             </button>
-        </div>
-        <div class="sync-status-indicator" id="header-sync-status">
-            <div class="sync-spinner"></div>
-            <span id="sync-status-text">Syncing...</span>
         </div>
         <div class="header-progress" id="header-progress"></div>
         <button class="header-menu" id="header-menu" title="Settings">
@@ -2543,18 +2508,6 @@
                 console.log(`%c⏳ In Progress:      %c${inProgressCount}`, 'font-weight: bold', 'color: #FF9800');
                 console.log(`%c📥 Not Downloaded:  %c${pendingCount}`, 'font-weight: bold', 'color: #f44336');
                 console.groupEnd();
-
-                const indicator = document.getElementById('header-sync-status');
-                const textSpan = document.getElementById('sync-status-text');
-                const spinner = indicator.querySelector('.sync-spinner');
-
-                if (allUnread.length > 0) {
-                    indicator.classList.add('active');
-                    textSpan.textContent = `${syncedCount}/${allUnread.length} Synced`;
-                    spinner.style.display = syncedCount === allUnread.length ? 'none' : 'block';
-                } else {
-                    indicator.classList.remove('active');
-                }
             } catch (e) {
                 console.error('Failed to update sync status display:', e);
             }
@@ -3134,7 +3087,6 @@
                 }
 
                 notification.textContent = `Syncing ${total} posts for offline...`;
-                document.getElementById('header-sync-status').classList.add('active');
 
                 let synched = 0;
                 let failed = 0;
@@ -3150,7 +3102,6 @@
                         const cached = await AppCache.get(STORES.AUDIO, cacheKey);
                         if (cached && cached.status === 'done') {
                             synched++;
-                            updateSyncStatusText(synched, total);
                             continue;
                         }
 
@@ -3168,7 +3119,6 @@
 
                         synched++;
                         notification.textContent = `Syncing: ${synched}/${total}...`;
-                        updateSyncStatusText(synched, total);
                         // Small buffer to avoid hitting API rate limits too hard
                         await new Promise(r => setTimeout(r, 500));
                     } catch (e) {
@@ -3190,18 +3140,6 @@
             }, 3000);
         }
 
-        function updateSyncStatusText(current, total) {
-            const textSpan = document.getElementById('sync-status-text');
-            const spinner = document.querySelector('#header-sync-status .sync-spinner');
-            if (textSpan) {
-                textSpan.textContent = `${current}/${total} Synced`;
-            }
-            if (spinner) {
-                spinner.style.display = current === total ? 'none' : 'block';
-            }
-        }
-
-        // Search functionality
         function setupSearch() {
             const searchBar = document.getElementById('search-bar');
 
