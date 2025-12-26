@@ -2907,43 +2907,133 @@
             return notification;
         }
 
-        async function syncAllForOffline() {
-            const allPosts = Array.from(document.querySelectorAll('.blog-post')).filter(p => !p.classList.contains('read'));
-            const total = allPosts.length;
-            if (total === 0) {
-                showSyncNotification('No unread posts to sync.');
-                return;
+        async function getAllPostsSync(tabType) {
+            const data = await loadTabData(tabType);
+            if (!data.table || !data.table.rows) return [];
+
+            const rows = data.table.rows;
+            const cols = data.table.cols;
+            const columnMap = {};
+            cols.forEach((col, index) => {
+                if (col.label) columnMap[col.label.toLowerCase()] = index;
+            });
+
+            let indices = {};
+            if (tabType === 'videos') {
+                indices.title = columnMap['video title'] ?? -1;
+                indices.url = columnMap['video url'] ?? -1;
+                indices.date = columnMap['added at'] ?? -1;
+                indices.published = columnMap['published at'] ?? -1;
+                indices.summary = columnMap['summary'] ?? -1;
+                indices.read = columnMap['read'] ?? -1;
+            } else if (tabType === 'notes') {
+                indices.date = columnMap['added at'] ?? -1;
+                indices.summary = columnMap['note'] ?? -1;
+                indices.archive = columnMap['archived'] ?? -1;
+                indices.star = columnMap['star'] ?? -1;
+                indices.id = columnMap['id'] ?? -1;
             }
 
-            const notification = showSyncNotification(`Syncing ${total} posts for offline...`, 0);
+            return rows.map(row => {
+                if (!row.c) return null;
+                let title, videoUrl, addedAt, publishedAt, summary, isRead, isArchived, isStarred, noteId;
 
-            let synched = 0;
-            let failed = 0;
+                if (tabType === 'videos') {
+                    title = indices.title >= 0 && row.c[indices.title] ? row.c[indices.title].v : '';
+                    videoUrl = indices.url >= 0 && row.c[indices.url] ? row.c[indices.url].v : '';
+                    addedAt = indices.date >= 0 && row.c[indices.date] ? row.c[indices.date].v : '';
+                    publishedAt = indices.published >= 0 && row.c[indices.published] ? row.c[indices.published].v : '';
+                    summary = indices.summary >= 0 && row.c[indices.summary] ? row.c[indices.summary].v : '';
+                    isRead = indices.read >= 0 && row.c[indices.read] ? (row.c[indices.read].v === 1 || row.c[indices.read].v === '1') : false;
+                } else if (tabType === 'notes') {
+                    const content = indices.summary >= 0 && row.c[indices.summary] ? row.c[indices.summary].v : '';
+                    const lines = content.split('\n');
+                    title = lines[0] ? (lines[0].length > 50 ? lines[0].substring(0, 50) + '...' : lines[0]) : 'Untitled Note';
+                    addedAt = indices.date >= 0 && row.c[indices.date] ? row.c[indices.date].v : '';
+                    summary = content;
+                    isRead = false;
+                    isArchived = indices.archive >= 0 && row.c[indices.archive] ? (row.c[indices.archive].v === 1 || row.c[indices.archive].v === '1') : false;
+                    isStarred = indices.star >= 0 && row.c[indices.star] ? (row.c[indices.star].v === 1 || row.c[indices.star].v === '1') : false;
+                    noteId = indices.id >= 0 && row.c[indices.id] ? row.c[indices.id].v : null;
+                }
 
-            for (const post of allPosts) {
-                const listenBtn = post.querySelector('.listen-btn');
-                if (listenBtn) {
+                if (!summary || !summary.trim()) return null;
+                const post = { title, videoUrl, addedAt, publishedAt, summary: summary.trim(), isRead, tabType };
+                if (tabType === 'notes') { post.isArchived = isArchived; post.isStarred = isStarred; post.noteId = noteId; }
+                return post;
+            }).filter(p => p !== null);
+        }
+
+        async function syncAllForOffline() {
+            const notification = showSyncNotification(`Scanning for unread posts...`, 0);
+
+            try {
+                // Fetch data for both tabs
+                const [videos, notes] = await Promise.all([
+                    getAllPostsSync('videos'),
+                    getAllPostsSync('notes')
+                ]);
+
+                const allUnread = [...videos, ...notes].filter(p => {
+                    if (p.tabType === 'videos') return !p.isRead;
+                    if (p.tabType === 'notes') return !p.isArchived;
+                    return false;
+                });
+
+                const total = allUnread.length;
+                if (total === 0) {
+                    notification.textContent = 'All posts are already synced!';
+                    setTimeout(() => notification.remove(), 2000);
+                    return;
+                }
+
+                notification.textContent = `Syncing ${total} posts for offline...`;
+
+                let synched = 0;
+                let failed = 0;
+
+                for (const post of allUnread) {
                     try {
-                        const text = getSpeechText(listenBtn);
+                        const text = getPostSpeechText(post);
                         const useChinese = containsChinese(text);
-                        const voice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
-                        const cacheKey = await hashText(text + voice.languageCode + voice.ssmlGender);
-                        const cached = await AppCache.get(STORES.AUDIO, cacheKey);
+                        const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+                        const cacheKey = await hashText(text + selectedVoice.languageCode + selectedVoice.ssmlGender);
 
-                        if (!cached) {
-                            await preloadSpeech(listenBtn);
-                            await new Promise(r => setTimeout(r, 500)); // Rate limiting
+                        // Check if already "done"
+                        const cached = await AppCache.get(STORES.AUDIO, cacheKey);
+                        if (cached && cached.status === 'done') {
+                            synched++;
+                            continue;
                         }
+
+                        // Start synthesis and WAIT for it to complete if it's chunked
+                        const result = await synthesizeSpeech(text);
+                        if (result && typeof result === 'object' && result.isProcessing) {
+                            await new Promise(resolve => {
+                                const check = () => {
+                                    if (!result.isProcessing) resolve();
+                                    else setTimeout(check, 200);
+                                };
+                                check();
+                            });
+                        }
+
                         synched++;
                         notification.textContent = `Syncing: ${synched}/${total}...`;
+                        // Small buffer to avoid hitting API rate limits too hard
+                        await new Promise(r => setTimeout(r, 500));
                     } catch (e) {
                         console.error('Failed to sync post:', e);
                         failed++;
                     }
                 }
+
+                notification.textContent = `Sync complete! ${synched} ready. ${failed ? failed + ' failed.' : ''}`;
+            } catch (error) {
+                console.error('Sync failed:', error);
+                notification.textContent = 'Sync failed. Check connection.';
             }
 
-            notification.textContent = `Sync complete! ${synched} ready. ${failed ? failed + ' failed.' : ''}`;
             setTimeout(() => {
                 notification.classList.remove('show');
                 setTimeout(() => notification.remove(), 300);
@@ -3611,22 +3701,47 @@
         };
 
         // Speech synthesis functionality using Google Cloud TTS with streaming support
-        function getSpeechText(button) {
-            const postElement = button.closest('.blog-post');
-            const contentDiv = postElement.querySelector('.post-content');
-            let textToSpeak = 'Overview.';
-
-            if (contentDiv) {
-                // Clone the content to avoid modifying the original
-                const contentClone = contentDiv.cloneNode(true);
-
-                // Remove all tables from the clone
-                const tables = contentClone.querySelectorAll('table');
+        function getCleanTextFromSummary(summary) {
+            if (!summary) return '';
+            const tempDiv = document.createElement('div');
+            try {
+                // Parse markdown and remove tables
+                tempDiv.innerHTML = marked.parse(summary);
+                const tables = tempDiv.querySelectorAll('table');
                 tables.forEach(table => table.remove());
 
-                // Get the text content after removing tables
+                // Remove the first H1 if present (it's often the title)
+                const firstH1 = tempDiv.querySelector('h1');
+                if (firstH1) firstH1.remove();
+            } catch (e) {
+                tempDiv.innerHTML = summary;
+            }
+            return (tempDiv.textContent || tempDiv.innerText || '').trim();
+        }
+
+        function getPostSpeechText(post) {
+            const isNote = post.tabType === 'notes';
+            const title = isNote ? formatDate(post.addedAt, true) : (post.title || 'Untitled');
+            const cleanContent = getCleanTextFromSummary(post.summary);
+            return `Overview. ${title}. ${cleanContent}`;
+        }
+
+        function getSpeechText(button) {
+            if (button.postData) {
+                return getPostSpeechText(button.postData);
+            }
+            // Fallback to DOM-based extraction if postData is missing
+            const postElement = button.closest('.blog-post');
+            const title = postElement.querySelector('.post-title').innerText;
+            const contentDiv = postElement.querySelector('.post-content');
+            let textToSpeak = `Overview. ${title}.`;
+
+            if (contentDiv) {
+                const contentClone = contentDiv.cloneNode(true);
+                const tables = contentClone.querySelectorAll('table');
+                tables.forEach(table => table.remove());
                 const contentText = contentClone.textContent || contentClone.innerText || '';
-                textToSpeak = `Overview. ${contentText.trim()}`;
+                textToSpeak = `Overview. ${title}. ${contentText.trim()}`;
             }
             return textToSpeak;
         }
