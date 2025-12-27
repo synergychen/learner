@@ -80,6 +80,10 @@
             opacity: 0.5;
         }
 
+        .blog-post.audio-not-ready {
+            border: 1px solid #6e6e6e;
+        }
+
         .blog-post.collapsed .post-content {
             display: none;
         }
@@ -1791,52 +1795,6 @@
             }
         }
 
-        async function pruneStaleAudioCache() {
-            try {
-                console.log('--- Pruning Stale Audio Cache ---');
-                // 1. Get all unread posts from both tabs to determine "valid" keys
-                const [videos, notes] = await Promise.all([
-                    getAllPostsSync('videos'),
-                    getAllPostsSync('notes')
-                ]);
-
-                const allUnread = [...videos, ...notes].filter(p => {
-                    if (p.tabType === 'videos') return !p.isRead;
-                    if (p.tabType === 'notes') return !p.isArchived;
-                    return false;
-                });
-
-                const validKeys = new Set();
-                for (const post of allUnread) {
-                    const text = getPostSpeechText(post);
-                    const useChinese = containsChinese(text);
-                    const voice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
-                    const cacheKey = await hashText(text + voice.languageCode + voice.ssmlGender);
-                    validKeys.add(cacheKey);
-                }
-
-                // 2. Get all keys currently in IndexedDB
-                const cachedKeys = await AppCache.getAllKeys(STORES.AUDIO);
-
-                // 3. Delete any keys not in the valid set
-                let deletedCount = 0;
-                for (const key of cachedKeys) {
-                    if (!validKeys.has(key)) {
-                        await AppCache.delete(STORES.AUDIO, key);
-                        deletedCount++;
-                    }
-                }
-
-                if (deletedCount > 0) {
-                    console.log(`%c🗑 Pruned ${deletedCount} stale audio entries from IndexedDB`, 'color: #FF9800; font-weight: bold');
-                } else {
-                    console.log('No stale audio entries found.');
-                }
-            } catch (error) {
-                console.error('Failed to prune audio cache:', error);
-            }
-        }
-
         async function hashText(text) {
             const encoder = new TextEncoder();
             const data = encoder.encode(text);
@@ -2251,6 +2209,9 @@
             postDiv.appendChild(headerDiv);
             postDiv.appendChild(contentDiv);
 
+            // Check if audio is ready to set initial border
+            updatePostReadyStatus(postDiv);
+
             return postDiv;
         }
 
@@ -2458,18 +2419,46 @@
             // Initial sync check
             updateSyncStatusDisplay();
 
-            // Prune stale audio from IndexedDB
-            pruneStaleAudioCache();
-
             // Auto preload if enabled
-            if (localStorage.getItem('learner_auto_preload') === 'true' && isOnline) {
+            if (isOnline) {
                 console.log('Preloading all audios as per setting...');
                 setTimeout(() => syncAllForOffline(), 1000);
             }
         }
 
+        async function updatePostReadyStatus(postDiv) {
+            const listenBtn = postDiv.querySelector('.listen-btn');
+            if (!listenBtn) return;
+
+            try {
+                const text = getSpeechText(listenBtn);
+                const useChinese = containsChinese(text);
+                const voice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+                const cacheKey = await hashText(text + voice.languageCode + voice.ssmlGender);
+                const cached = await AppCache.get(STORES.AUDIO, cacheKey);
+
+                if (cached && cached.status === 'done') {
+                    postDiv.classList.remove('audio-not-ready');
+                } else {
+                    postDiv.classList.add('audio-not-ready');
+                }
+            } catch (e) {
+                console.error('Error checking audio readiness:', e);
+            }
+        }
+
+        async function updateAllPostsReadyStatus() {
+            const posts = document.querySelectorAll('.blog-post');
+            for (const post of posts) {
+                await updatePostReadyStatus(post);
+            }
+        }
+
         async function updateSyncStatusDisplay() {
             try {
+                // Update all borders based on cache
+                await updateAllPostsReadyStatus();
+
                 const [videos, notes] = await Promise.all([
                     getAllPostsSync('videos'),
                     getAllPostsSync('notes')
@@ -3086,10 +3075,9 @@
                     return;
                 }
 
-                notification.textContent = `Syncing ${total} posts for offline...`;
-
                 let synched = 0;
                 let failed = 0;
+                notification.textContent = `Syncing: ${synched}/${total}...`;
 
                 for (const post of allUnread) {
                     try {
@@ -3102,6 +3090,7 @@
                         const cached = await AppCache.get(STORES.AUDIO, cacheKey);
                         if (cached && cached.status === 'done') {
                             synched++;
+                            notification.textContent = `Syncing: ${synched}/${total}...`;
                             continue;
                         }
 
@@ -3119,6 +3108,14 @@
 
                         synched++;
                         notification.textContent = `Syncing: ${synched}/${total}...`;
+
+                        // Update border for this post if it's on screen
+                        const postId = post.tabType === 'videos' ? post.videoUrl : post.noteId;
+                        const postElement = document.querySelector(`[data-id="${postId}"]`);
+                        if (postElement) {
+                             await updatePostReadyStatus(postElement);
+                        }
+
                         // Small buffer to avoid hitting API rate limits too hard
                         await new Promise(r => setTimeout(r, 500));
                     } catch (e) {
@@ -3127,7 +3124,16 @@
                     }
                 }
 
-                notification.textContent = `Sync complete! ${synched} ready. ${failed ? failed + ' failed.' : ''}`;
+                // Final update of all borders and counts
+                await updateAllPostsReadyStatus();
+                const container = document.getElementById(`${currentTab}-container`);
+                const currentPosts = container ? Array.from(container.querySelectorAll('.blog-post:not(.read)')) : [];
+                let loadedSyncedCount = 0;
+                currentPosts.forEach(p => {
+                    if (!p.classList.contains('audio-not-ready')) loadedSyncedCount++;
+                });
+
+                notification.textContent = `Sync complete! ${loadedSyncedCount}/${currentPosts.length} posts on screen are ready.`;
                 updateSyncStatusDisplay();
             } catch (error) {
                 console.error('Sync failed:', error);
