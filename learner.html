@@ -3072,34 +3072,37 @@
         }
 
         async function syncAllForOffline() {
-            const notification = showSyncNotification(`Scanning for unread posts...`, 0);
+            // Get current active container
+            const container = document.getElementById(`${currentTab}-container`);
+            if (!container) return;
+
+            // Find all unread posts that are currently visible on screen (not hidden by search)
+            const visiblePostElements = Array.from(container.querySelectorAll('.blog-post:not(.read)'))
+                .filter(el => el.style.display !== 'none');
+
+            const total = visiblePostElements.length;
+
+            if (total === 0) {
+                showSyncNotification('All visible posts are already synced!', 2000);
+                updateSyncStatusDisplay();
+                return;
+            }
+
+            const notification = showSyncNotification(`Syncing: 0/${total}...`, 0);
 
             try {
-                // Fetch data for both tabs
-                const [videos, notes] = await Promise.all([
-                    getAllPostsSync('videos'),
-                    getAllPostsSync('notes')
-                ]);
+                // Fetch data for the current tab to map DOM elements to data objects
+                const postsData = await getAllPostsSync(currentTab);
 
-                const allUnread = [...videos, ...notes].filter(p => {
-                    if (p.tabType === 'videos') return !p.isRead;
-                    if (p.tabType === 'notes') return !p.isArchived;
-                    return false;
-                });
+                // Map visible elements to their corresponding data objects
+                const postsToSync = visiblePostElements.map(el => {
+                    const id = el.getAttribute('data-id');
+                    return postsData.find(p => (p.videoUrl === id || p.noteId === id));
+                }).filter(p => p !== null);
 
-                const total = allUnread.length;
-                if (total === 0) {
-                    notification.textContent = 'All posts are already synced!';
-                    updateSyncStatusDisplay();
-                    setTimeout(() => notification.remove(), 2000);
-                    return;
-                }
+                let processed = 0;
 
-                let synched = 0;
-                let failed = 0;
-                notification.textContent = `Syncing: ${synched}/${total}...`;
-
-                for (const post of allUnread) {
+                for (const post of postsToSync) {
                     try {
                         const text = getPostSpeechText(post);
                         const useChinese = containsChinese(text);
@@ -3109,8 +3112,10 @@
                         // Check if already "done"
                         const cached = await AppCache.get(STORES.AUDIO, cacheKey);
                         if (cached && cached.status === 'done') {
-                            synched++;
-                            notification.textContent = `Syncing: ${synched}/${total}...`;
+                            processed++;
+                            if (notification.parentElement) {
+                                notification.textContent = `Syncing: ${processed}/${total}...`;
+                            }
                             continue;
                         }
 
@@ -3126,10 +3131,12 @@
                             });
                         }
 
-                        synched++;
-                        notification.textContent = `Syncing: ${synched}/${total}...`;
+                        processed++;
+                        if (notification.parentElement) {
+                            notification.textContent = `Syncing: ${processed}/${total}...`;
+                        }
 
-                        // Update border for this post if it's on screen
+                        // Update border for this post
                         const postId = post.tabType === 'videos' ? post.videoUrl : post.noteId;
                         const postElement = document.querySelector(`[data-id="${postId}"]`);
                         if (postElement) {
@@ -3140,29 +3147,31 @@
                         await new Promise(r => setTimeout(r, 500));
                     } catch (e) {
                         console.error('Failed to sync post:', e);
-                        failed++;
+                        processed++;
+                        if (notification.parentElement) {
+                            notification.textContent = `Syncing: ${processed}/${total}...`;
+                        }
                     }
                 }
 
                 // Final update of all borders and counts
                 await updateAllPostsReadyStatus();
-                const container = document.getElementById(`${currentTab}-container`);
-                const currentPosts = container ? Array.from(container.querySelectorAll('.blog-post:not(.read)')) : [];
-                let loadedSyncedCount = 0;
-                currentPosts.forEach(p => {
-                    if (!p.classList.contains('audio-not-ready')) loadedSyncedCount++;
-                });
-
-                notification.textContent = `Sync complete! ${loadedSyncedCount}/${currentPosts.length} posts on screen are ready.`;
+                if (notification.parentElement) {
+                    notification.textContent = `Sync complete!`;
+                }
                 updateSyncStatusDisplay();
             } catch (error) {
                 console.error('Sync failed:', error);
-                notification.textContent = 'Sync failed. Check connection.';
+                if (notification.parentElement) {
+                    notification.textContent = 'Sync failed. Check connection.';
+                }
             }
 
             setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => notification.remove(), 300);
+                if (notification.parentElement) {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                }
             }, 3000);
         }
 
