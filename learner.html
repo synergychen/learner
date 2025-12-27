@@ -2439,10 +2439,20 @@
             // Initial sync check
             updateSyncStatusDisplay();
 
+            // Load autoPreload setting if not already loaded
+            if (window.autoPreloadEnabled === undefined) {
+                window.autoPreloadEnabled = localStorage.getItem('learner_auto_preload') === 'true';
+            }
+
             // Auto preload if enabled
             if (isOnline) {
-                console.log('Preloading all audios as per setting...');
-                setTimeout(() => syncAllForOffline(), 1000);
+                if (window.autoPreloadEnabled) {
+                    console.log('Preloading all audios as per setting...');
+                    setTimeout(() => syncAllForOffline(), 1000);
+                } else {
+                    console.log('Preloading only the first audio (auto-preload disabled)...');
+                    setTimeout(() => syncAllForOffline(1), 1000);
+                }
             }
         }
 
@@ -3071,7 +3081,7 @@
             }).filter(p => p !== null);
         }
 
-        async function syncAllForOffline() {
+        async function syncAllForOffline(limit = null) {
             // Get current active container
             const container = document.getElementById(`${currentTab}-container`);
             if (!container) return;
@@ -3095,13 +3105,25 @@
                 const postsData = await getAllPostsSync(currentTab);
 
                 // Map visible elements to their corresponding data objects
-                const postsToSync = visiblePostElements.map(el => {
+                let postsToSync = visiblePostElements.map(el => {
                     const id = el.getAttribute('data-id');
                     return postsData.find(p => (p.videoUrl === id || p.noteId === id));
                 }).filter(p => p !== null);
 
-                let processed = 0;
+                if (limit !== null) {
+                    postsToSync = postsToSync.slice(0, limit);
+                }
 
+                const total = postsToSync.length;
+                if (total === 0) {
+                    if (limit === null) showSyncNotification('All visible posts are already synced!', 2000);
+                    updateSyncStatusDisplay();
+                    return;
+                }
+
+                const notification = showSyncNotification(`Syncing: 0/${total}...`, 0);
+
+                let processed = 0;
                 for (const post of postsToSync) {
                     try {
                         const text = getPostSpeechText(post);
@@ -5143,8 +5165,7 @@
             const autoPreloadToggle = document.getElementById('auto-preload-toggle');
             const autoPreloadItem = document.getElementById('auto-preload-item');
 
-            // Load saved setting - default to false (off)
-            window.autoPreloadEnabled = localStorage.getItem('learner_auto_preload') === 'true';
+            // Setting already loaded in loadPosts() or DOMContentLoaded
             if (window.autoPreloadEnabled) {
                 autoPreloadToggle.classList.add('dark');
             }
