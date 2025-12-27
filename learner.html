@@ -3114,9 +3114,24 @@
                     postsToSync = postsToSync.slice(0, limit);
                 }
 
-                const total = postsToSync.length;
+                // Filter out posts that are already in IndexedDB
+                const needsSync = [];
+                for (const post of postsToSync) {
+                    const text = getPostSpeechText(post);
+                    const useChinese = containsChinese(text);
+                    const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+                    const cacheKey = await hashText(text + selectedVoice.languageCode + selectedVoice.ssmlGender);
+
+                    const cached = await AppCache.get(STORES.AUDIO, cacheKey);
+                    if (!cached || cached.status !== 'done') {
+                        needsSync.push(post);
+                    }
+                }
+
+                const total = needsSync.length;
                 if (total === 0) {
-                    if (limit === null) showSyncNotification('All visible posts are already synced!', 2000);
+                    // Update borders even if nothing to sync
+                    await updateAllPostsReadyStatus();
                     updateSyncStatusDisplay();
                     return;
                 }
@@ -3124,22 +3139,12 @@
                 const notification = showSyncNotification(`Syncing: 0/${total}...`, 0);
 
                 let processed = 0;
-                for (const post of postsToSync) {
+                for (const post of needsSync) {
                     try {
                         const text = getPostSpeechText(post);
                         const useChinese = containsChinese(text);
                         const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
                         const cacheKey = await hashText(text + selectedVoice.languageCode + selectedVoice.ssmlGender);
-
-                        // Check if already "done"
-                        const cached = await AppCache.get(STORES.AUDIO, cacheKey);
-                        if (cached && cached.status === 'done') {
-                            processed++;
-                            if (notification.parentElement) {
-                                notification.textContent = `Syncing: ${processed}/${total}...`;
-                            }
-                            continue;
-                        }
 
                         // Start synthesis and WAIT for it to complete if it's chunked
                         const result = await synthesizeSpeech(text);
