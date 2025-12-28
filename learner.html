@@ -2526,8 +2526,8 @@
                 const syncBtn = document.getElementById('sync-btn');
                 if (syncBtn && !syncBtn.classList.contains('syncing')) {
                     syncBtn.textContent = `Download Audios (${syncedCount}/${allUnread.length})`;
-                    const initialProgress = allUnread.length > 0 ? (syncedCount / allUnread.length) * 100 : 0;
-                    syncBtn.style.setProperty('--sync-progress', `${initialProgress}%`);
+                    // Reset progress to 0% when NOT syncing
+                    syncBtn.style.setProperty('--sync-progress', '0%');
                 }
 
                 // Log summary to console with grouping for prominence
@@ -3004,10 +3004,9 @@
                 let currentSyncedCount = globalCacheChecks.filter(x => x).length;
 
                 let processed = 0;
-                // Initialize button progress
+                // Initialize button progress to 0 for the start of the batch
                 if (syncBtn) {
-                    const initialProgress = (currentSyncedCount / totalUnreadCount) * 100;
-                    syncBtn.style.setProperty('--sync-progress', `${initialProgress}%`);
+                    syncBtn.style.setProperty('--sync-progress', '0%');
                 }
 
                 for (const post of needsSync) {
@@ -3035,11 +3034,10 @@
                             await new Promise(resolve => {
                                 let waitTime = 0;
                                 const check = () => {
-                                    // Calculate intra-post progress
-                                    const chunkProgress = (1 + (result.audioQueue?.length || 0)) / result.totalChunks;
-                                    const overallProgress = ((currentSyncedCount + chunkProgress) / totalUnreadCount) * 100;
+                                    // Calculate intra-post progress (percentage of total chunks for CURRENT audio)
+                                    const audioProgress = ((1 + (result.audioQueue?.length || 0)) / result.totalChunks) * 100;
                                     if (syncBtn) {
-                                        syncBtn.style.setProperty('--sync-progress', `${overallProgress}%`);
+                                        syncBtn.style.setProperty('--sync-progress', `${audioProgress}%`);
                                     }
 
                                     if (!result.isProcessing || waitTime > 60000) resolve(); // 60s timeout
@@ -3053,8 +3051,7 @@
                         } else {
                             // Single chunk or already done
                             if (syncBtn) {
-                                const overallProgress = ((currentSyncedCount + 1) / totalUnreadCount) * 100;
-                                syncBtn.style.setProperty('--sync-progress', `${overallProgress}%`);
+                                syncBtn.style.setProperty('--sync-progress', '100%');
                             }
                         }
 
