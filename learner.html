@@ -243,27 +243,39 @@
             border-color: #071df5 transparent transparent transparent;
         }
 
-        .search-container {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .search-bar {
-            width: 100%;
-            padding: 10px 15px;
-            border: 1px solid #ddd;
+        .sync-btn {
+            background: #071df5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
             border-radius: 8px;
             font-size: calc(0.9rem * var(--font-scale));
-            transition: border-color 0.2s ease;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            font-weight: 600;
         }
 
-        .search-bar:focus {
-            outline: none;
-            border-color: #071df5;
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        .sync-btn:hover {
+            background: #0516cc;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(7, 29, 245, 0.2);
         }
 
-        .collapse-all-btn, .sync-btn {
+        .sync-btn:active {
+            transform: translateY(0);
+        }
+
+        .sync-btn.syncing {
+            background: #3b82f6;
+            cursor: wait;
+        }
+
+        .collapse-all-btn {
             background: #071df5; color: white; border: none; padding: 10px 12px;
             border-radius: 4px; font-size: calc(0.8rem * var(--font-scale));
             cursor: pointer; transition: background-color 0.2s ease;
@@ -1500,9 +1512,9 @@
 
     <div class="container">
         <div class="controls">
-            <div class="search-container">
-                <input type="text" class="search-bar" id="search-bar" placeholder="Search posts...">
-            </div>
+            <button class="sync-btn" id="sync-btn" onclick="syncAllForOffline()">
+                Download Audios (0/0)
+            </button>
             <button class="collapse-all-btn" id="collapse-all-btn" title="Collapse All">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18 15L12 9L6 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2614,6 +2626,12 @@
                     }
                 }
 
+                // Update Download Button Text
+                const syncBtn = document.getElementById('sync-btn');
+                if (syncBtn && !syncBtn.classList.contains('syncing')) {
+                    syncBtn.textContent = `Download Audios (${syncedCount}/${allUnread.length})`;
+                }
+
                 // Log summary to console with grouping for prominence
                 console.group('%c📊 Audio Sync Summary', 'color: #6a78f8; font-weight: bold; font-size: 1.2em');
                 console.log(`%cTotal Unread Posts: %c${allUnread.length}`, 'font-weight: bold', 'color: #000');
@@ -3176,28 +3194,28 @@
         }
 
         async function syncAllForOffline(limit = null) {
+            const syncBtn = document.getElementById('sync-btn');
+
             // Get current active container
             const container = document.getElementById(`${currentTab}-container`);
             if (!container) return;
 
-            // Find all unread posts that are currently visible on screen (not hidden by search)
-            const visiblePostElements = Array.from(container.querySelectorAll('.blog-post:not(.read)'))
-                .filter(el => el.style.display !== 'none');
+            // Find all unread posts
+            const unreadPostElements = Array.from(container.querySelectorAll('.blog-post:not(.read)'));
 
-            if (visiblePostElements.length === 0) {
-                showSyncNotification('All visible posts are already synced!', 2000);
+            if (unreadPostElements.length === 0) {
                 updateSyncStatusDisplay();
                 return;
             }
 
-            const notification = showSyncNotification(`Scanning posts...`, 0);
+            if (syncBtn) syncBtn.classList.add('syncing');
 
             try {
                 // Fetch data for the current tab to map DOM elements to data objects
                 const postsData = await getAllPostsSync(currentTab);
 
-                // Map visible elements to their corresponding data objects
-                const postsToSyncRaw = visiblePostElements.map(el => {
+                // Map elements to their corresponding data objects
+                const postsToSyncRaw = unreadPostElements.map(el => {
                     const id = el.getAttribute('data-id');
                     return postsData.find(p => (p.videoUrl === id || p.noteId === id));
                 }).filter(p => p !== null);
@@ -3206,7 +3224,7 @@
                     postsToSyncRaw.splice(limit);
                 }
 
-                // Filter out posts that are already in IndexedDB - optimize with Promise.all
+                // Filter out posts that are already in IndexedDB
                 const needsSync = [];
                 const cacheResults = await Promise.all(postsToSyncRaw.map(async post => {
                     const text = getPostSpeechText(post);
@@ -3221,21 +3239,37 @@
                     if (!res.isCached) needsSync.push(res.post);
                 }
 
-                const total = needsSync.length;
-                if (total === 0) {
-                    notification.textContent = 'All posts are already synced!';
+                if (needsSync.length === 0) {
                     await updateAllPostsReadyStatus();
                     updateSyncStatusDisplay();
-                    setTimeout(() => notification.remove(), 2000);
+                    if (syncBtn) syncBtn.classList.remove('syncing');
                     return;
                 }
+
+                // Get global unread sync status for the button display
+                const [videos, notes] = await Promise.all([
+                    getAllPostsSync('videos'),
+                    getAllPostsSync('notes')
+                ]);
+                const allUnreadPostsGlobal = [...videos, ...notes].filter(p => p.tabType === 'videos' ? !p.isRead : !p.isArchived);
+                const totalUnreadCount = allUnreadPostsGlobal.length;
+
+                // Calculate actual synced count globally
+                const globalCacheChecks = await Promise.all(allUnreadPostsGlobal.map(async post => {
+                    const text = getPostSpeechText(post);
+                    const useChinese = containsChinese(text);
+                    const voice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+                    const cacheKey = await hashText(text + voice.languageCode + voice.ssmlGender);
+                    const cached = await AppCache.get(STORES.AUDIO, cacheKey);
+                    return cached && cached.status === 'done';
+                }));
+                let currentSyncedCount = globalCacheChecks.filter(x => x).length;
 
                 let processed = 0;
                 for (const post of needsSync) {
                     try {
-                        const currentNum = processed + 1;
-                        if (notification.parentElement) {
-                            notification.textContent = `Syncing: ${currentNum}/${total}...`;
+                        if (syncBtn) {
+                            syncBtn.textContent = `Downloading: ${currentSyncedCount + 1}/${totalUnreadCount}`;
                         }
 
                         const text = getPostSpeechText(post);
@@ -3268,10 +3302,16 @@
                         }
 
                         processed++;
+                        currentSyncedCount++;
 
                         // Update border to READY (or what matches current cache)
                         if (postElement) {
                              await updatePostReadyStatus(postElement);
+                        }
+
+                        // Update button text after each download
+                        if (syncBtn) {
+                            syncBtn.textContent = `Downloading: ${currentSyncedCount}/${totalUnreadCount}`;
                         }
 
                         // Small buffer to avoid hitting API rate limits
@@ -3279,60 +3319,18 @@
                     } catch (e) {
                         console.error('Failed to sync post:', e);
                         processed++;
-                        if (notification.parentElement) {
-                            notification.textContent = `Syncing: ${processed}/${total}...`;
-                        }
                     }
                 }
 
                 // Final update
                 await updateAllPostsReadyStatus();
-                if (notification.parentElement) {
-                    notification.textContent = `Sync complete!`;
-                }
                 updateSyncStatusDisplay();
             } catch (error) {
                 console.error('Sync failed:', error);
-                if (notification.parentElement) {
-                    notification.textContent = 'Sync failed. Check connection.';
-                }
+            } finally {
+                if (syncBtn) syncBtn.classList.remove('syncing');
+                updateSyncStatusDisplay();
             }
-
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.classList.remove('show');
-                    setTimeout(() => notification.remove(), 300);
-                }
-            }, 3000);
-        }
-
-        function setupSearch() {
-            const searchBar = document.getElementById('search-bar');
-
-            searchBar.addEventListener('input', function() {
-                applyCurrentSearchFilter();
-            });
-        }
-
-        function applyCurrentSearchFilter() {
-            const searchBar = document.getElementById('search-bar');
-            if (!searchBar) return;
-
-            const searchTerm = searchBar.value.toLowerCase().trim();
-            const currentContainer = document.getElementById(`${currentTab}-container`);
-            if (!currentContainer) return;
-
-            const posts = currentContainer.querySelectorAll('.blog-post');
-            posts.forEach(post => {
-                const title = post.querySelector('.post-title').textContent.toLowerCase();
-                const content = post.querySelector('.post-content').textContent.toLowerCase();
-
-                if (searchTerm === '' || title.includes(searchTerm) || content.includes(searchTerm)) {
-                    post.style.display = '';
-                } else {
-                    post.style.display = 'none';
-                }
-            });
         }
 
         // Floating nav functionality
@@ -5525,7 +5523,7 @@
             setupOfflineSupport();
             setupHeaderAudioButton();
             loadPosts().then(() => {
-                setupSearch();
+
                 setupCollapseAll();
                 setupTextHighlighting();
                 setupHeaderTitleUpdate();
