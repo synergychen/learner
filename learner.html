@@ -830,6 +830,33 @@
             color: #999;
         }
 
+        .audio-status {
+            font-size: calc(0.7rem * var(--font-scale));
+            margin-left: 8px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            vertical-align: middle;
+            transition: all 0.3s ease;
+        }
+
+        .audio-status.downloaded {
+            color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+        }
+
+        .audio-status.pending {
+            display: none;
+        }
+
+        body.dark-mode .audio-status.downloaded {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.15);
+        }
+
         .api-key-help a {
             color: #071df5;
             text-decoration: none;
@@ -2069,9 +2096,13 @@
             readingTimeSpan.className = 'reading-time';
             readingTimeSpan.textContent = readingTime;
 
+            const audioStatusSpan = document.createElement('span');
+            audioStatusSpan.className = 'audio-status';
+
             metadataInfo.textContent = dateText;
             metadataInfo.appendChild(document.createElement('br'));
             metadataInfo.appendChild(readingTimeSpan);
+            metadataInfo.appendChild(audioStatusSpan);
 
             dateElement.appendChild(metadataInfo);
 
@@ -2458,6 +2489,7 @@
 
         async function updatePostReadyStatus(postDiv) {
             const listenBtn = postDiv.querySelector('.listen-btn');
+            const audioStatusSpan = postDiv.querySelector('.audio-status');
             if (!listenBtn) return;
 
             try {
@@ -2469,8 +2501,21 @@
 
                 if (cached && cached.status === 'done') {
                     postDiv.classList.remove('audio-not-ready');
+                    if (audioStatusSpan) {
+                        audioStatusSpan.className = 'audio-status downloaded';
+                        audioStatusSpan.innerHTML = `
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            AUDIO
+                        `;
+                    }
                 } else {
                     postDiv.classList.add('audio-not-ready');
+                    if (audioStatusSpan) {
+                        audioStatusSpan.className = 'audio-status pending';
+                        audioStatusSpan.innerHTML = '';
+                    }
                 }
             } catch (e) {
                 console.error('Error checking audio readiness:', e);
