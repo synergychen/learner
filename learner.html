@@ -1582,16 +1582,7 @@
                     <div class="theme-toggle-slider"></div>
                 </div>
             </div>
-            <div class="menu-item" id="sync-menu-item">
-                <div class="menu-item-label">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M23 20V14H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M3.51 15A9 9 0 0 0 18.36 18.36L23 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Sync
-                </div>
-            </div>
+
             <div class="menu-item" id="app-config-menu-item">
                 <div class="menu-item-label">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1607,17 +1598,7 @@
                     </svg>
                 </div>
             </div>
-            <div class="menu-divider"></div>
-            <div class="menu-item" id="sync-offline-item">
-                <div class="menu-item-label">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Sync All for Offline
-                </div>
-            </div>
+
             <div class="menu-item" id="clear-audio-item">
                 <div class="menu-item-label">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3061,8 +3042,8 @@
 
                 updateButtonStatus();
 
-                // Worker pool for parallel downloads (concurrency = 3)
-                const CONCURRENCY = 3;
+                // Worker pool for parallel downloads (concurrency = 5)
+                const CONCURRENCY = 5;
                 let postIndex = 0;
 
                 const worker = async () => {
@@ -3077,7 +3058,7 @@
                             const postElement = document.querySelector(`[data-id="${postId}"]`);
 
                             // Start synthesis
-                            const result = await synthesizeSpeech(text);
+                            const result = await synthesizeSpeech(text, post.title);
 
                             // Update border NOW to reflect 'in_progress' from cache
                             if (postElement) {
@@ -4049,7 +4030,7 @@
                             </svg>
                         `;
 
-                        audioResult = await synthesizeSpeech(textToSpeak);
+                        audioResult = await synthesizeSpeech(textToSpeak, postElement.querySelector('.post-title')?.textContent);
                     }
 
                     // Check if this is a streaming result (multiple chunks) or single audio
@@ -4451,20 +4432,21 @@
         }
 
         // Function to call Google Cloud Text-to-Speech API with text chunking for long content
-        async function synthesizeSpeech(text) {
+        async function synthesizeSpeech(text, label = 'Audio') {
             // Detect language and choose appropriate voice
             const useChinese = containsChinese(text);
             const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
+            const logLabel = label.length > 30 ? label.substring(0, 30) + '...' : label;
 
             // Check IndexedDB cache first
             const cacheKey = await hashText(text + selectedVoice.languageCode + selectedVoice.ssmlGender);
             const cachedEntry = await AppCache.get(STORES.AUDIO, cacheKey);
 
             if (cachedEntry && cachedEntry.status === 'done') {
-                console.log('%c⚡ Using cached audio from IndexedDB', 'color: #4CAF50; font-weight: bold');
+                console.log(`%c⚡ [${logLabel}] Using cached audio`, 'color: #4CAF50; font-weight: bold');
                 return cachedEntry.data;
             } else if (cachedEntry && cachedEntry.status === 'in_progress') {
-                console.log('%c⏳ Previous synthesis was incomplete, restarting...', 'color: #FF9800');
+                console.log(`%c⏳ [${logLabel}] Previous synthesis incomplete, restarting...`, 'color: #FF9800');
             }
 
             // Mark as in-progress in cache
@@ -4472,20 +4454,21 @@
 
             // Check text length to determine approach
             const textBytes = new TextEncoder().encode(text).length;
-            console.log('Text length in bytes:', textBytes);
+            console.log(`[${logLabel}] Text bytes:`, textBytes);
 
             let result;
             if (textBytes <= GOOGLE_CLOUD_TTS_CONFIG.maxTextBytes) {
-                console.log('Using single API call');
+                console.log(`[${logLabel}] Single API call`);
                 result = await synthesizeShortAudio(text, selectedVoice);
             } else {
-                console.log('Using chunked synthesis for long text');
-                result = await synthesizeChunkedAudio(text, selectedVoice);
+                console.log(`[${logLabel}] Chunked synthesis`);
+                result = await synthesizeChunkedAudio(text, selectedVoice, label);
             }
 
             // Save to cache if it's a small result
             if (typeof result === 'string') {
                 await AppCache.set(STORES.AUDIO, cacheKey, { status: 'done', data: result });
+                console.log(`%c💾 [${logLabel}] Saved to cache`, 'color: #9E9E9E');
             }
 
             return result;
@@ -4522,29 +4505,29 @@
         }
 
         // Function for chunked audio synthesis (splits long text into smaller parts)
-        async function synthesizeChunkedAudio(text, voice) {
-            console.log('Starting streaming chunked synthesis for long text');
+        async function synthesizeChunkedAudio(text, voice, label = 'Audio') {
+            const logLabel = label.length > 30 ? label.substring(0, 30) + '...' : label;
+            console.log(`[${logLabel}] Starting chunked synthesis`);
 
             // Split text into chunks with progressive sizes for faster first playback
             // First chunk: 1000 bytes, second: 2000 bytes, rest: maxTextBytes (4000)
             const chunks = splitTextIntoChunksProgressive(text, [1000, 2000, GOOGLE_CLOUD_TTS_CONFIG.maxTextBytes]);
 
             // Log chunk breakdown
-            console.log(`%c📦 Audio Chunks: ${chunks.length} total`, 'font-weight: bold');
+            console.log(`%c📦 [${logLabel}] Chunks: ${chunks.length} total`, 'font-weight: bold');
             chunks.forEach((chunk, i) => {
                 const bytes = new TextEncoder().encode(chunk).length;
-                console.log(`   Chunk ${i + 1}: ${bytes.toLocaleString()} bytes`);
+                console.log(`   [${logLabel}] Chunk ${i + 1}: ${bytes.toLocaleString()} bytes`);
             });
 
             // Synthesize first chunk immediately
-            // Replace periods with Chinese periods for better TTS pauses
             const firstChunkText = chunks[0].replace(/\./g, '。');
             const firstChunkBytes = new TextEncoder().encode(firstChunkText).length;
-            console.log(`%c▶️ Processing chunk 1/${chunks.length}`, 'color: #4CAF50', `(${firstChunkBytes.toLocaleString()} bytes)`);
+            console.log(`%c▶️ [${logLabel}] Processing chunk 1/${chunks.length}`, 'color: #4CAF50', `(${firstChunkBytes.toLocaleString()} bytes)`);
             const startTime = performance.now();
             const firstChunk = await synthesizeShortAudio(firstChunkText, voice);
             const elapsed = (performance.now() - startTime).toFixed(0);
-            console.log(`%c✓ Chunk 1 ready`, 'color: #4CAF50', `${elapsed}ms`);
+            console.log(`%c✓ [${logLabel}] Chunk 1 ready`, 'color: #4CAF50', `${elapsed}ms`);
 
             // Create streaming audio result with first chunk and background processing
             const streamingResult = {
@@ -4562,7 +4545,7 @@
 
             // Process remaining chunks in background if there are more
             if (chunks.length > 1) {
-                processRemainingChunks(streamingResult, chunks.slice(1), voice);
+                processRemainingChunks(streamingResult, chunks.slice(1), voice, label);
             } else {
                 // Only one chunk, so firstChunk IS the merged content
                 streamingResult.mergedContent = streamingResult.firstChunk;
@@ -4577,14 +4560,15 @@
         }
 
         // Background processing of remaining chunks
-        async function processRemainingChunks(streamingResult, remainingChunks, voice) {
+        async function processRemainingChunks(streamingResult, remainingChunks, voice, label = 'Audio') {
+            const logLabel = label.length > 30 ? label.substring(0, 30) + '...' : label;
             const totalStart = performance.now();
 
             for (let i = 0; i < remainingChunks.length; i++) {
                 const chunkIndex = i + 1; // +1 because first chunk is already processed
                 const chunkNum = chunkIndex + 1;
                 const chunkBytes = new TextEncoder().encode(remainingChunks[i]).length;
-                console.log(`%c▶️ Processing chunk ${chunkNum}/${streamingResult.totalChunks}`, 'color: #2196F3', `(${chunkBytes.toLocaleString()} bytes)`);
+                console.log(`%c▶️ [${logLabel}] Chunk ${chunkNum}/${streamingResult.totalChunks}`, 'color: #2196F3', `(${chunkBytes.toLocaleString()} bytes)`);
 
                 try {
                     const startTime = performance.now();
@@ -4599,14 +4583,14 @@
                         text: remainingChunks[i]
                     });
 
-                    console.log(`%c✓ Chunk ${chunkNum} ready`, 'color: #2196F3', `${elapsed}ms`);
+                    console.log(`%c✓ [${logLabel}] Chunk ${chunkNum} ready`, 'color: #2196F3', `${elapsed}ms`);
 
                     // Small delay between requests to avoid rate limiting
                     if (i < remainingChunks.length - 1) {
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
                 } catch (error) {
-                    console.error(`%c✗ Chunk ${chunkNum} failed:`, 'color: #f44336', error.message);
+                    console.error(`%c✗ [${logLabel}] Chunk ${chunkNum} failed:`, 'color: #f44336', error.message);
                     // Continue processing other chunks even if one fails
                 }
             }
@@ -4615,7 +4599,7 @@
 
             // Merge all chunks once background processing is complete
             if (streamingResult.audioQueue.length === remainingChunks.length) {
-                console.log(`%c🔄 Merging ${streamingResult.totalChunks} audio chunks...`, 'color: #9C27B0');
+                console.log(`%c🔄 [${logLabel}] Merging ${streamingResult.totalChunks} chunks...`, 'color: #9C27B0');
                 const piecesToMerge = [streamingResult.firstChunk];
 
                 // Ensure chunks are in correct order
@@ -4625,7 +4609,7 @@
                 const merged = mergeBase64Audio(piecesToMerge);
                 if (merged) {
                     streamingResult.mergedContent = merged;
-                    console.log('%c✅ Audio chunks merged into single file', 'color: #4CAF50');
+                    console.log(`%c✅ [${logLabel}] Merged into single file`, 'color: #4CAF50');
                 }
             }
 
@@ -4633,11 +4617,11 @@
             // This ensures walkers see 'done' state before isProcessing is released
             if (streamingResult.cacheKey) {
                 await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, { status: 'done', data: streamingResult });
-                console.log('%c💾 Saved chunked audio to IndexedDB', 'color: #9E9E9E');
+                console.log(`%c💾 [${logLabel}] Saved to IndexedDB`, 'color: #9E9E9E');
             }
 
             streamingResult.isProcessing = false;
-            console.log(`%c🎵 All ${streamingResult.totalChunks} chunks ready`, 'font-weight: bold; color: #4CAF50', `(total: ${totalElapsed}s)`);
+            console.log(`%c🎵 [${logLabel}] All ${streamingResult.totalChunks} chunks ready`, 'font-weight: bold; color: #4CAF50', `(total: ${totalElapsed}s)`);
         }
 
         // Function to split text into chunks with progressive byte limits
@@ -5064,22 +5048,9 @@
                 localStorage.setItem('learner_theme', isDark ? 'light' : 'dark');
             });
 
-            // Sync functionality
-            syncMenuItem.addEventListener('click', () => {
-                Object.assign(syncMenuItem.style, { opacity: '0.6', pointerEvents: 'none' });
-                closeMenu();
-                setTimeout(() => window.location.reload(), 200);
-            });
-
             appConfigMenuItem.addEventListener('click', () => {
                 closeMenu();
                 showUnifiedSettingsModal();
-            });
-
-            // Sync for Offline
-            document.getElementById('sync-offline-item').addEventListener('click', async () => {
-                closeMenu();
-                await syncAllForOffline();
             });
 
             // Clear Audio Cache
