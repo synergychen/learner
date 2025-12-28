@@ -1856,6 +1856,41 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        // Helper function to merge multiple base64 audio chunks into one
+        function mergeBase64Audio(base64Array) {
+            try {
+                // Convert all base64 to Uint8Arrays
+                const pieces = base64Array.map(b64 => {
+                    const binary = atob(b64);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) {
+                        bytes[i] = binary.charCodeAt(i);
+                    }
+                    return bytes;
+                });
+
+                // Calculate total size and concatenate
+                const totalSize = pieces.reduce((acc, p) => acc + p.length, 0);
+                const merged = new Uint8Array(totalSize);
+                let offset = 0;
+                for (const piece of pieces) {
+                    merged.set(piece, offset);
+                    offset += piece.length;
+                }
+
+                // Convert back to base64 in chunks (to avoid stack overflow)
+                let binaryOutput = '';
+                const CHUNK_SIZE = 16384;
+                for (let i = 0; i < merged.length; i += CHUNK_SIZE) {
+                    binaryOutput += String.fromCharCode.apply(null, merged.subarray(i, i + CHUNK_SIZE));
+                }
+                return btoa(binaryOutput);
+            } catch (error) {
+                console.error('Failed to merge audio chunks:', error);
+                return null;
+            }
+        }
+
         let currentTab = 'videos'; // Default tab
 
         // Global shared audio player to handle continuous play and bypass autoplay restrictions
@@ -3973,7 +4008,7 @@
                     }
 
                     // Check if this is a streaming result (multiple chunks) or single audio
-                    if (audioResult && audioResult.totalChunks && audioResult.totalChunks > 1) {
+                    if (audioResult && audioResult.totalChunks && audioResult.totalChunks > 1 && !audioResult.mergedContent) {
                         // Streaming audio with multiple chunks
                         console.log(`Starting streaming playback with ${audioResult.totalChunks} chunks`);
 
@@ -4001,8 +4036,8 @@
                         await audioQueueManager.playFirstChunk();
 
                     } else if (audioResult) {
-                        // Single chunk audio (original behavior)
-                        const audioContent = audioResult.firstChunk || audioResult;
+                        // Single chunk audio (original behavior) or merged streaming audio
+                        const audioContent = audioResult.mergedContent || audioResult.firstChunk || audioResult;
 
                         // Use shared audio player
                         const audio = getSharedAudio();
@@ -4479,6 +4514,8 @@
             if (chunks.length > 1) {
                 processRemainingChunks(streamingResult, chunks.slice(1), voice);
             } else {
+                // Only one chunk, so firstChunk IS the merged content
+                streamingResult.mergedContent = streamingResult.firstChunk;
                 // Save single-chunk streaming result to cache
                 if (streamingResult.cacheKey) {
                     await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, { status: 'done', data: streamingResult });
@@ -4525,6 +4562,22 @@
             }
 
             const totalElapsed = ((performance.now() - totalStart) / 1000).toFixed(1);
+
+            // Merge all chunks once background processing is complete
+            if (streamingResult.audioQueue.length === remainingChunks.length) {
+                console.log(`%c🔄 Merging ${streamingResult.totalChunks} audio chunks...`, 'color: #9C27B0');
+                const piecesToMerge = [streamingResult.firstChunk];
+
+                // Ensure chunks are in correct order
+                const sortedQueue = [...streamingResult.audioQueue].sort((a, b) => a.index - b.index);
+                sortedQueue.forEach(q => piecesToMerge.push(q.audioContent));
+
+                const merged = mergeBase64Audio(piecesToMerge);
+                if (merged) {
+                    streamingResult.mergedContent = merged;
+                    console.log('%c✅ Audio chunks merged into single file', 'color: #4CAF50');
+                }
+            }
 
             // Save completed chunked synthesis to persistent cache FIRST
             // This ensures walkers see 'done' state before isProcessing is released
