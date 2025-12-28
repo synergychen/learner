@@ -2529,6 +2529,11 @@
                 const videos = await getAllPostsSync();
 
                 const allUnread = videos.filter(p => {
+                    // Check DOM first for most up-to-date local status
+                    const postElement = document.querySelector(`[data-id="${p.videoUrl}"]`);
+                    if (postElement) {
+                        return !postElement.classList.contains('read');
+                    }
                     return !p.isRead;
                 });
 
@@ -3018,6 +3023,11 @@
                 // Get global unread sync status for the button display
                 const videos = await getAllPostsSync();
                 const allUnreadPostsGlobal = videos.filter(p => {
+                    // Check DOM first for most up-to-date local status
+                    const postElement = document.querySelector(`[data-id="${p.videoUrl}"]`);
+                    if (postElement) {
+                        return !postElement.classList.contains('read');
+                    }
                     return !p.isRead;
                 });
                 const totalUnreadCount = allUnreadPostsGlobal.length;
