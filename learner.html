@@ -88,8 +88,6 @@
             display: none;
         }
 
-
-
         .blog-post.collapsed .mark-read-btn {
             margin-top: 0;
         }
@@ -2117,9 +2115,9 @@
             metadataInfo.style.flex = '1';
             metadataInfo.style.whiteSpace = 'pre-line';
 
-            let dateText = `Added: ${formatDate(post.addedAt, isNote)}`;
+            let dateText = "";
             if (post.publishedAt) {
-                dateText += `\nPublished: ${formatDate(post.publishedAt)}`;
+                dateText = `Published: ${formatDate(post.publishedAt)}`;
             }
 
             const readingTime = calculateReadingTime(post.summary || '');
@@ -2130,8 +2128,10 @@
             const audioStatusSpan = document.createElement('span');
             audioStatusSpan.className = 'audio-status';
 
-            metadataInfo.textContent = dateText;
-            metadataInfo.appendChild(document.createElement('br'));
+            if (dateText) {
+                metadataInfo.textContent = dateText;
+                metadataInfo.appendChild(document.createElement('br'));
+            }
             metadataInfo.appendChild(readingTimeSpan);
             metadataInfo.appendChild(audioStatusSpan);
 
@@ -2163,7 +2163,7 @@
             });
 
             dateElement.appendChild(listenBtn);
-            headerDiv.appendChild(dateElement);
+            // Reordered: Don't append dateElement here anymore, it's done after titleContainer below
 
             // Initialize post state based on post.isRead or post.isArchived
             if (isNote) {
@@ -2253,8 +2253,7 @@
             }
 
             headerDiv.appendChild(titleContainer);
-
-            // Metadata and Listen button are already added above
+            headerDiv.appendChild(dateElement);
 
             // Add YouTube embed to header if video URL exists
             if (post.videoUrl && post.videoUrl.trim()) {
