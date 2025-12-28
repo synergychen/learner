@@ -1930,7 +1930,12 @@
                 artist: 'Learner',
                 album: 'Learner Audio',
                 artwork: [
-                    { src: 'https://img.icons8.com/fluency/240/learning.png', sizes: '240x240', type: 'image/png' }
+                    { src: 'https://i.imgur.com/nXRkDYO.png', sizes: '96x96', type: 'image/png' },
+                    { src: 'https://i.imgur.com/nXRkDYO.png', sizes: '128x128', type: 'image/png' },
+                    { src: 'https://i.imgur.com/nXRkDYO.png', sizes: '192x192', type: 'image/png' },
+                    { src: 'https://i.imgur.com/nXRkDYO.png', sizes: '256x256', type: 'image/png' },
+                    { src: 'https://i.imgur.com/nXRkDYO.png', sizes: '384x384', type: 'image/png' },
+                    { src: 'https://i.imgur.com/nXRkDYO.png', sizes: '512x512', type: 'image/png' },
                 ]
             });
 
@@ -1953,15 +1958,17 @@
             });
 
             navigator.mediaSession.setActionHandler('previoustrack', () => {
-                console.log('Media Session: previoustrack');
                 const prevBtn = document.getElementById('floating-prev');
                 if (prevBtn) prevBtn.click();
             });
 
             navigator.mediaSession.setActionHandler('nexttrack', () => {
-                console.log('Media Session: nexttrack');
                 const nextBtn = document.getElementById('floating-next');
                 if (nextBtn) nextBtn.click();
+            });
+
+            navigator.mediaSession.setActionHandler('stop', () => {
+                stopAllPlayback();
             });
         }
 
@@ -2011,16 +2018,26 @@
 
         // Function to unlock audio on first human interaction
         function unlockAudio() {
-            if (!window.sharedAudio._unlocked) {
-                console.log('Unlocking audio context...');
-                window.sharedAudio.play().then(() => {
-                    window.sharedAudio.pause();
-                    window.sharedAudio._unlocked = true;
-                    console.log('Audio context unlocked');
-                }).catch(e => {
-                    console.log('Audio unlock deferred:', e.message);
-                });
-            }
+            if (window.sharedAudio._unlocked) return;
+
+            console.log('Unlocking audio context...');
+            // Use a tiny 0.1s silent MP3 as a "blessing" source
+            const silentMP3 = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGFtZTMuMTAwAaaaaaaaaaaaaAAA//MUxAAAAAYAHAAAAAL7mUAAAAAAf0AAABXAFBFAAAAAAAA//MUxAsAAAYAHAAAAAL7mUAAAAAAf0AAABXAFBFAAAAAAAA//MUxBAAAAYAHAAAAAL7mUAAAAAAf0AAABXAFBFAAAAAAAA';
+
+            const audio = window.sharedAudio;
+            const originalSrc = audio.src;
+
+            audio.src = silentMP3;
+            audio.play().then(() => {
+                audio.pause();
+                audio.src = originalSrc || '';
+                window.sharedAudio._unlocked = true;
+                console.log('Audio context unlocked');
+            }).catch(e => {
+                console.warn('Audio unlock failed or deferred:', e.message);
+                // On iOS, we might still be able to play later if we touched it
+                window.sharedAudio._unlocked = true;
+            });
         }
 
         // Handle page refresh/clean start logic
@@ -3974,6 +3991,18 @@
                 const postElement = button.closest('.blog-post');
                 const contentDiv = postElement.querySelector('.post-content');
 
+                // iOS/Safari: Prime the shared audio object inside the user-gestured click event
+                // This is CRITICAL for iOS to allow the later async play() call.
+                const audio = getSharedAudio();
+                try {
+                    // Start a silent play immediately to "harness" the user gesture
+                    // We don't bother with .then() here, just trigger it
+                    audio.play().catch(() => {});
+                    audio.pause();
+                } catch (e) {
+                    console.warn('Silent priming failed:', e);
+                }
+
                 // Set up text tracking for scroll-along feature
                 if (contentDiv) {
                     setupTextTracking(contentDiv);
@@ -4031,6 +4060,7 @@
 
                         // Update floating mark button to show pause icon
                         updateFloatingMarkState();
+                        updateMediaSession(button);
 
                         // Start streaming playback
                         await audioQueueManager.playFirstChunk();
@@ -4039,9 +4069,13 @@
                         // Single chunk audio (original behavior) or merged streaming audio
                         const audioContent = audioResult.mergedContent || audioResult.firstChunk || audioResult;
 
+                        if (!audioContent) {
+                            throw new Error('No audio content received from synthesis');
+                        }
+
                         // Use shared audio player
                         const audio = getSharedAudio();
-                        audio.src = `data:audio/mp3;base64,${audioContent}`;
+                        audio.src = `data:audio/mpeg;base64,${audioContent}`;
                         audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
                         // Update button state and start tracking time
@@ -4727,7 +4761,7 @@
 
                 // Use shared audio player
                 const audio = getSharedAudio();
-                audio.src = `data:audio/mp3;base64,${this.streamingResult.firstChunk}`;
+                audio.src = `data:audio/mpeg;base64,${this.streamingResult.firstChunk}`;
                 audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
                 this.currentAudio = audio;
@@ -4784,7 +4818,7 @@
 
                     // Use shared player
                     const audio = getSharedAudio();
-                    audio.src = `data:audio/mp3;base64,${nextChunk.audioContent}`;
+                    audio.src = `data:audio/mpeg;base64,${nextChunk.audioContent}`;
                     audio.playbackRate = window.currentPlaybackSpeed || 1.0;
 
                     this.currentAudio = audio;
@@ -4818,6 +4852,7 @@
                     this.isPlaying = false;
                     this.isPaused = true;
                     console.log(`%c⏸ Paused at chunk ${this.currentChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #FF9800');
+                    updateMediaSession(this.button);
                 }
             }
 
@@ -4828,6 +4863,7 @@
                         this.isPlaying = true;
                         this.isPaused = false;
                         console.log(`%c▶️ Resumed chunk ${this.currentChunkIndex + 1}/${this.streamingResult.totalChunks}`, 'color: #4CAF50');
+                        updateMediaSession(this.button);
                     } catch (e) {
                         console.error('Resume failed:', e);
                     }
