@@ -5253,6 +5253,8 @@
                 setupHeaderTitleUpdate();
                 setupHamburgerMenu();
                 setupUnifiedSettingsModal();
+                setupBottomTabs();
+                setupBottomTabsScrollBehavior();
                 setupFloatingNav();
             });
         });
@@ -5275,10 +5277,166 @@
             });
         }
 
+        // Bottom Tab Navigation Setup
+        function setupBottomTabs() {
+            const tabItems = document.querySelectorAll('.tab-item');
 
+            tabItems.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Get tab type
+                    const tabType = tab.dataset.tab;
 
+                    // Check if clicking on already active tab
+                    const isAlreadyActive = tab.classList.contains('active');
+
+                    if (isAlreadyActive) {
+                        // Scroll to top if clicking on active tab
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                        refreshTab(tabType);
+                        return;
+                    }
+
+                    // Remove active class from all tabs
+                    tabItems.forEach(t => t.classList.remove('active'));
+
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+
+                    // Handle tab switching logic
+                    handleTabSwitch(tabType);
+                });
+            });
+        }
+
+        // Bottom Tabs Scroll Behavior
+        function setupBottomTabsScrollBehavior() {
+            const bottomTabs = document.querySelector('.bottom-tabs');
+            if (!bottomTabs) return;
+            let lastScrollTop = 0;
+            let scrollTimeout;
+            let lastScrollDirection = null;
+            const scrollThreshold = 5; // Minimum pixels to consider as intentional scroll
+
+            window.addEventListener('scroll', () => {
+                const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollDifference = Math.abs(currentScrollTop - lastScrollTop);
+
+                // Clear existing timeout
+                clearTimeout(scrollTimeout);
+
+                // Only process scroll if it's above threshold (prevents jitter)
+                if (scrollDifference > scrollThreshold) {
+                    // Determine scroll direction
+                    if (currentScrollTop > lastScrollTop && currentScrollTop > 100) {
+                        // Scrolling down - hide tabs
+                        bottomTabs.classList.add('hidden');
+                        lastScrollDirection = 'down';
+                    } else if (currentScrollTop < lastScrollTop) {
+                        // Scrolling up - show tabs
+                        bottomTabs.classList.remove('hidden');
+                        lastScrollDirection = 'up';
+                    }
+
+                    lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
+                }
+
+                // Only show tabs after scroll stops if:
+                // 1. User was scrolling up, OR
+                // 2. User is near the top of the page
+                scrollTimeout = setTimeout(() => {
+                    if (lastScrollDirection === 'up' || currentScrollTop < 200) {
+                        bottomTabs.classList.remove('hidden');
+                    }
+                }, 1000);
+            }, { passive: true });
+        }
+
+        async function handleTabSwitch(tabType) {
+            // Don't switch if already on the same tab
+            if (currentTab === tabType) return;
+
+            console.log('Switched to tab:', tabType);
+
+            // Stop all playback when switching tabs
+            stopAllPlayback();
+
+            // Update current tab
+            currentTab = tabType;
+
+            // Update tab button states
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabType}`).classList.add('active');
+
+            // Hide all tab content containers
+            document.querySelectorAll('.tab-content').forEach(container => {
+                container.style.display = 'none';
+            });
+
+            // Show the selected tab container
+            const targetContainer = document.getElementById(`${tabType}-container`);
+            targetContainer.style.display = 'block';
+
+            // Load content for the tab if not already loaded
+            await renderTabContent(tabType);
+
+            // Reset header title when switching tabs
+            resetHeaderTitle();
+        }
+
+        async function refreshTab(tabType) {
+            console.log('Refreshing tab:', tabType);
+            if (!isOnline) {
+                console.warn('Offline - skipping refresh');
+                showOfflineNotification('You\'re offline. Showing cached content.');
+                showSyncNotification('Failed');
+                return;
+            }
+
+            cachedData[tabType] = null;
+
+            const container = document.getElementById(`${tabType}-container`);
+            if (container) {
+                // Stop all playback before clearing content to avoid orphaned audio
+                stopAllPlayback();
+                container.innerHTML = '';
+            }
+
+            try {
+                await loadTabData(tabType);
+
+                const noPostsElement = document.getElementById('no-posts');
+                if (noPostsElement) {
+                    noPostsElement.style.display = 'none';
+                }
+
+                await renderTabContent(tabType);
+
+                if (currentTab === tabType) {
+                    resetHeaderTitle();
+                    showSyncNotification('Synced');
+                }
+            } catch (error) {
+                console.error(`Error refreshing ${tabType}:`, error);
+                showSyncNotification('Failed');
+            }
+        }
     </script>
 
 
+    <!-- Bottom Tab Navigation -->
+    <div class="bottom-tabs">
+        <button class="tab-item active" id="tab-videos" data-tab="videos">
+            <svg class="tab-icon" viewBox="0 0 24 24">
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+            <span class="tab-label">Videos</span>
+        </button>
+    </div>
 </body>
 </html>
