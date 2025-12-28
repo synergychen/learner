@@ -2542,7 +2542,7 @@
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
-                                READY
+                                <span>READY</span>
                             `;
                         }
                     } else if (cached.status === 'in_progress') {
@@ -2553,21 +2553,21 @@
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;">
                                     <path d="M21 12a9 9 0 11-6.219-8.56"></path>
                                 </svg>
-                                SYNCING
+                                <span>SYNCING</span>
                             `;
                         }
                     } else {
                          postDiv.classList.add('audio-not-ready');
                          if (audioStatusSpan) {
                             audioStatusSpan.className = 'audio-status todo';
-                            audioStatusSpan.innerHTML = 'TO DO';
+                            audioStatusSpan.innerHTML = '<span>TO DO</span>';
                         }
                     }
                 } else {
                     postDiv.classList.add('audio-not-ready');
                     if (audioStatusSpan) {
                         audioStatusSpan.className = 'audio-status todo';
-                        audioStatusSpan.innerHTML = 'TO DO';
+                        audioStatusSpan.innerHTML = '<span>TO DO</span>';
                     }
                 }
             } catch (e) {
