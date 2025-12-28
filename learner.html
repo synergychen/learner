@@ -3386,6 +3386,17 @@
                 const current = getCurrentVisiblePost();
                 if (current) {
                     scrollToAdjacentPost(current, 1);
+                } else {
+                    // Fallback: if at top, scroll to first visible post
+                    const activeContainer = document.getElementById(`${currentTab}-container`);
+                    if (activeContainer) {
+                        const firstPost = activeContainer.querySelector('.blog-post:not([style*="display: none"])');
+                        if (firstPost) {
+                            const headerHeight = 70;
+                            const rect = firstPost.getBoundingClientRect();
+                            window.scrollTo({ top: rect.top + window.scrollY - headerHeight + 5, behavior: 'smooth' });
+                        }
+                    }
                 }
             });
 
@@ -3404,12 +3415,21 @@
                 }
 
                 let current = getCurrentVisiblePost();
+                if (!current) {
+                    // Fallback to first visible post if at top
+                    const activeContainer = document.getElementById(`${currentTab}-container`);
+                    if (activeContainer) {
+                        current = activeContainer.querySelector('.blog-post:not([style*="display: none"])');
+                    }
+                }
+
                 if (!current) return;
 
                 // If current post is already read/archived, assume user wants to mark the NEXT post
                 if (current.classList.contains('read')) {
                     const container = current.parentElement;
-                    const allPosts = Array.from(container.querySelectorAll('.blog-post'));
+                    const allPosts = Array.from(container.querySelectorAll('.blog-post'))
+                        .filter(el => el.style.display !== 'none');
                     const idx = allPosts.indexOf(current);
                     if (idx !== -1 && idx < allPosts.length - 1) {
                         current = allPosts[idx + 1];
@@ -3417,7 +3437,6 @@
                 }
 
                 // Only perform action if the target post is NOT read/archived
-                // This ensures the button only ever performs "Mark as read" (or "Archive")
                 if (!current.classList.contains('read')) {
                     const bottomBtn = current.querySelector('.mark-read-btn-bottom');
                     if (bottomBtn) {
@@ -3559,8 +3578,38 @@
         function getCurrentVisiblePost() {
             const activeContainer = document.getElementById(`${currentTab}-container`);
             if (!activeContainer) return null;
-            const posts = Array.from(activeContainer.querySelectorAll('.blog-post'));
+
+            // Filter only visible posts
+            const posts = Array.from(activeContainer.querySelectorAll('.blog-post'))
+                .filter(el => el.style.display !== 'none');
+
             if (!posts.length) return null;
+
+            const headerHeight = 70;
+            const threshold = window.scrollY + headerHeight + 5;
+
+            // Find post that is spanning across the threshold (at the top under header)
+            for (const post of posts) {
+                const rect = post.getBoundingClientRect();
+                const postTop = rect.top + window.scrollY;
+                const postBottom = postTop + rect.height;
+                if (threshold >= postTop && threshold <= postBottom) {
+                    return post;
+                }
+            }
+
+            // Fallback: if we are at the very top, return the first post
+            if (window.scrollY < 100) return posts[0];
+
+            // Second Fallback: find any post that is visible in viewport
+            const firstInView = posts.find(post => {
+                const rect = post.getBoundingClientRect();
+                return rect.top >= 0 && rect.top <= window.innerHeight;
+            });
+
+            if (firstInView) return firstInView;
+
+            // Third Fallback: use closest to middle (legacy logic)
             const viewportMiddle = window.scrollY + window.innerHeight / 2;
             return posts.reduce((closest, post) => {
                 const rect = post.getBoundingClientRect();
@@ -3570,23 +3619,36 @@
                     return { element: post, distance };
                 }
                 return closest;
-            }, null)?.element || posts[0] || null;
+            }, null)?.element || posts[0];
         }
 
         function scrollToAdjacentPost(currentPostDiv, direction) {
             if (!currentPostDiv || typeof direction !== 'number') return;
-            const container = currentPostDiv.closest('.tab-content');
-            const posts = container ? Array.from(container.querySelectorAll('.blog-post')) : [];
+            const activeContainer = document.getElementById(`${currentTab}-container`);
+            if (!activeContainer) return;
+
+            // Get only visible posts
+            const posts = Array.from(activeContainer.querySelectorAll('.blog-post'))
+                .filter(el => el.style.display !== 'none');
+
             if (!posts.length) return;
             const currentIndex = posts.indexOf(currentPostDiv);
-            const target = posts[currentIndex + direction];
-            if (!target) return;
-            const offset = target.offsetTop - 20;
 
-            window.scrollTo({
-                top: offset,
-                behavior: 'smooth'
-            });
+            const targetIndex = currentIndex + direction;
+            if (targetIndex >= 0 && targetIndex < posts.length) {
+                const target = posts[targetIndex];
+                const headerHeight = 70;
+
+                // Get absolute top using getBoundingClientRect for reliability
+                const rect = target.getBoundingClientRect();
+                const absoluteTop = rect.top + window.scrollY;
+                const offset = absoluteTop - headerHeight + 5;
+
+                window.scrollTo({
+                    top: Math.max(0, offset),
+                    behavior: 'smooth'
+                });
+            }
         }
 
         // Collapse/Expand all functionality
