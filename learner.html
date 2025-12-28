@@ -257,7 +257,7 @@
             align-items: center;
             justify-content: center;
             flex: 1;
-            font-weight: 600;
+            font-weight: 100;
         }
 
         .sync-btn:hover {
@@ -2601,6 +2601,8 @@
                 ]);
 
                 const allUnread = [...videos, ...notes].filter(p => {
+                    // Only count unread posts from the CURRENT tab
+                    if (p.tabType !== currentTab) return false;
                     if (p.tabType === 'videos') return !p.isRead;
                     if (p.tabType === 'notes') return !p.isArchived;
                     return false;
@@ -3251,7 +3253,10 @@
                     getAllPostsSync('videos'),
                     getAllPostsSync('notes')
                 ]);
-                const allUnreadPostsGlobal = [...videos, ...notes].filter(p => p.tabType === 'videos' ? !p.isRead : !p.isArchived);
+                const allUnreadPostsGlobal = [...videos, ...notes].filter(p => {
+                    if (p.tabType !== currentTab) return false;
+                    return p.tabType === 'videos' ? !p.isRead : !p.isArchived;
+                });
                 const totalUnreadCount = allUnreadPostsGlobal.length;
 
                 // Calculate actual synced count globally
