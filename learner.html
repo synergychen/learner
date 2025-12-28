@@ -244,20 +244,23 @@
         }
 
         .sync-btn {
-            background: #071df5;
+            --sync-progress: 0%;
+            background: linear-gradient(to right, #0516cc var(--sync-progress), #071df5 var(--sync-progress));
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 8px;
             font-size: calc(0.9rem * var(--font-scale));
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             white-space: nowrap;
             display: flex;
             align-items: center;
             justify-content: center;
             flex: 1;
             font-weight: 100;
+            position: relative;
+            overflow: hidden;
         }
 
         .sync-btn:hover {
@@ -271,7 +274,7 @@
         }
 
         .sync-btn.syncing {
-            background: #3b82f6;
+            background: linear-gradient(to right, #22c55e var(--sync-progress), #3b82f6 var(--sync-progress));
             cursor: wait;
         }
 
@@ -2519,10 +2522,12 @@
                     }
                 }
 
-                // Update Download Button Text
+                // Update Download Button Text and Progress
                 const syncBtn = document.getElementById('sync-btn');
                 if (syncBtn && !syncBtn.classList.contains('syncing')) {
                     syncBtn.textContent = `Download Audios (${syncedCount}/${allUnread.length})`;
+                    const initialProgress = allUnread.length > 0 ? (syncedCount / allUnread.length) * 100 : 0;
+                    syncBtn.style.setProperty('--sync-progress', `${initialProgress}%`);
                 }
 
                 // Log summary to console with grouping for prominence
@@ -2999,6 +3004,12 @@
                 let currentSyncedCount = globalCacheChecks.filter(x => x).length;
 
                 let processed = 0;
+                // Initialize button progress
+                if (syncBtn) {
+                    const initialProgress = (currentSyncedCount / totalUnreadCount) * 100;
+                    syncBtn.style.setProperty('--sync-progress', `${initialProgress}%`);
+                }
+
                 for (const post of needsSync) {
                     try {
                         if (syncBtn) {
@@ -3019,11 +3030,18 @@
                              await updatePostReadyStatus(postElement);
                         }
 
-                        // Wait for chunked processing if needed
+                        // Wait for chunked processing if needed and update progress
                         if (result && typeof result === 'object' && result.isProcessing) {
                             await new Promise(resolve => {
                                 let waitTime = 0;
                                 const check = () => {
+                                    // Calculate intra-post progress
+                                    const chunkProgress = (1 + (result.audioQueue?.length || 0)) / result.totalChunks;
+                                    const overallProgress = ((currentSyncedCount + chunkProgress) / totalUnreadCount) * 100;
+                                    if (syncBtn) {
+                                        syncBtn.style.setProperty('--sync-progress', `${overallProgress}%`);
+                                    }
+
                                     if (!result.isProcessing || waitTime > 60000) resolve(); // 60s timeout
                                     else {
                                         waitTime += 200;
@@ -3032,6 +3050,12 @@
                                 };
                                 check();
                             });
+                        } else {
+                            // Single chunk or already done
+                            if (syncBtn) {
+                                const overallProgress = ((currentSyncedCount + 1) / totalUnreadCount) * 100;
+                                syncBtn.style.setProperty('--sync-progress', `${overallProgress}%`);
+                            }
                         }
 
                         processed++;
