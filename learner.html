@@ -3243,15 +3243,24 @@
 
                         const text = getPostSpeechText(post);
 
-                        // Start synthesis and WAIT for it to complete
+                        // Find element to update status immediately
+                        const postId = post.tabType === 'videos' ? post.videoUrl : post.noteId;
+                        const postElement = document.querySelector(`[data-id="${postId}"]`);
+
+                        // Start synthesis
                         const result = await synthesizeSpeech(text);
+
+                        // Update border NOW to reflect 'in_progress' from cache
+                        if (postElement) {
+                             await updatePostReadyStatus(postElement);
+                        }
 
                         // Wait for chunked processing if needed
                         if (result && typeof result === 'object' && result.isProcessing) {
                             await new Promise(resolve => {
                                 let waitTime = 0;
                                 const check = () => {
-                                    if (!result.isProcessing || waitTime > 30000) resolve(); // 30s timeout per post
+                                    if (!result.isProcessing || waitTime > 60000) resolve(); // 60s timeout
                                     else {
                                         waitTime += 200;
                                         setTimeout(check, 200);
@@ -3263,15 +3272,13 @@
 
                         processed++;
 
-                        // Update border for this post
-                        const postId = post.tabType === 'videos' ? post.videoUrl : post.noteId;
-                        const postElement = document.querySelector(`[data-id="${postId}"]`);
+                        // Update border to READY (or what matches current cache)
                         if (postElement) {
                              await updatePostReadyStatus(postElement);
                         }
 
                         // Small buffer to avoid hitting API rate limits
-                        await new Promise(r => setTimeout(r, 300));
+                        await new Promise(r => setTimeout(r, 200));
                     } catch (e) {
                         console.error('Failed to sync post:', e);
                         processed++;
@@ -4674,9 +4681,11 @@
             if (chunks.length > 1) {
                 processRemainingChunks(streamingResult, chunks.slice(1), voice);
             } else {
-                streamingResult.isProcessing = false;
                 // Save single-chunk streaming result to cache
-                await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, { status: 'done', data: streamingResult });
+                if (streamingResult.cacheKey) {
+                    await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, { status: 'done', data: streamingResult });
+                }
+                streamingResult.isProcessing = false;
             }
 
             return streamingResult;
@@ -4718,14 +4727,16 @@
             }
 
             const totalElapsed = ((performance.now() - totalStart) / 1000).toFixed(1);
-            streamingResult.isProcessing = false;
-            console.log(`%c🎵 All ${streamingResult.totalChunks} chunks ready`, 'font-weight: bold; color: #4CAF50', `(total: ${totalElapsed}s)`);
 
-            // Save completed chunked synthesis to persistent cache
+            // Save completed chunked synthesis to persistent cache FIRST
+            // This ensures walkers see 'done' state before isProcessing is released
             if (streamingResult.cacheKey) {
                 await AppCache.set(STORES.AUDIO, streamingResult.cacheKey, { status: 'done', data: streamingResult });
                 console.log('%c💾 Saved chunked audio to IndexedDB', 'color: #9E9E9E');
             }
+
+            streamingResult.isProcessing = false;
+            console.log(`%c🎵 All ${streamingResult.totalChunks} chunks ready`, 'font-weight: bold; color: #4CAF50', `(total: ${totalElapsed}s)`);
         }
 
         // Function to split text into chunks with progressive byte limits
