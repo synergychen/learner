@@ -833,7 +833,7 @@
         .audio-status {
             font-size: calc(0.6rem * var(--font-scale));
             margin-left: 8px;
-            padding: 2px 10px;
+            padding: 5px 10px;
             border-radius: 20px;
             font-weight: 800;
             display: inline-flex;
@@ -2542,7 +2542,7 @@
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
-                                <span>READY</span>
+                                <span>Audio</span>
                             `;
                         }
                     } else if (cached.status === 'in_progress') {
@@ -2553,21 +2553,21 @@
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;">
                                     <path d="M21 12a9 9 0 11-6.219-8.56"></path>
                                 </svg>
-                                <span>SYNCING</span>
+                                <span>Audio</span>
                             `;
                         }
                     } else {
                          postDiv.classList.add('audio-not-ready');
                          if (audioStatusSpan) {
                             audioStatusSpan.className = 'audio-status todo';
-                            audioStatusSpan.innerHTML = '<span>TO DO</span>';
+                            audioStatusSpan.innerHTML = '<span>Audio</span>';
                         }
                     }
                 } else {
                     postDiv.classList.add('audio-not-ready');
                     if (audioStatusSpan) {
                         audioStatusSpan.className = 'audio-status todo';
-                        audioStatusSpan.innerHTML = '<span>TO DO</span>';
+                        audioStatusSpan.innerHTML = '<span>Audio</span>';
                     }
                 }
             } catch (e) {
