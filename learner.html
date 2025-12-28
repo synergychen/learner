@@ -2539,6 +2539,8 @@
 
         function toggleCollapse(postDiv) {
             postDiv.classList.toggle('collapsed');
+            // Trigger floating nav visibility update
+            window.dispatchEvent(new Event('resize'));
         }
 
         function scrollToNextPost(currentPostDiv) {
@@ -3077,10 +3079,12 @@
 
             function updateVisibility() {
                 if (!floatingNav) return;
-                const hasPosts = document.querySelector(`#${currentTab}-container .blog-post`);
+                // Only show if at least one post is expanded (not collapsed)
+                const activeContainer = document.getElementById(`${currentTab}-container`);
+                const hasExpandedPosts = activeContainer && activeContainer.querySelector('.blog-post:not(.collapsed)');
                 const tabsHidden = bottomTabs && bottomTabs.classList.contains('hidden');
 
-                if (hasPosts) {
+                if (hasExpandedPosts) {
                     floatingNav.classList.add('visible');
                     floatingNav.classList.toggle('tabs-visible', !tabsHidden);
                 } else {
@@ -3100,6 +3104,9 @@
 
             window.addEventListener('scroll', handleScroll, { passive: true });
             window.addEventListener('resize', updateVisibility);
+
+            // Initial check
+            updateVisibility();
 
             prevBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -3419,6 +3426,8 @@
                 }
 
                 updateIcon();
+                // Trigger floating nav visibility update
+                window.dispatchEvent(new Event('resize'));
             });
 
             // Initialize with correct icon
@@ -5386,6 +5395,9 @@
 
             // Reset header title when switching tabs
             resetHeaderTitle();
+
+            // Trigger floating nav visibility update
+            window.dispatchEvent(new Event('resize'));
         }
 
         async function refreshTab(tabType) {
