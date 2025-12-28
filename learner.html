@@ -3052,62 +3052,78 @@
                 }));
                 let currentSyncedCount = globalCacheChecks.filter(x => x).length;
 
-                let processed = 0;
-                for (const post of needsSync) {
-                    try {
-                        if (syncBtn) {
-                            syncBtn.textContent = `Downloading: ${currentSyncedCount + 1}/${totalUnreadCount}`;
-                        }
-
-                        const text = getPostSpeechText(post);
-
-                        // Find element to update status immediately
-                        const postId = post.videoUrl;
-                        const postElement = document.querySelector(`[data-id="${postId}"]`);
-
-                        // Start synthesis
-                        const result = await synthesizeSpeech(text);
-
-                        // Update border NOW to reflect 'in_progress' from cache
-                        if (postElement) {
-                             await updatePostReadyStatus(postElement);
-                        }
-
-                        // Wait for chunked processing if needed
-                        if (result && typeof result === 'object' && result.isProcessing) {
-                            await new Promise(resolve => {
-                                let waitTime = 0;
-                                const check = () => {
-                                    if (!result.isProcessing || waitTime > 60000) resolve(); // 60s timeout
-                                    else {
-                                        waitTime += 200;
-                                        setTimeout(check, 200);
-                                    }
-                                };
-                                check();
-                            });
-                        }
-
-                        processed++;
-                        currentSyncedCount++;
-
-                        // Update border to READY (or what matches current cache)
-                        if (postElement) {
-                             await updatePostReadyStatus(postElement);
-                        }
-
-                        // Update button text after each download
-                        if (syncBtn) {
-                            syncBtn.textContent = `Downloading: ${currentSyncedCount}/${totalUnreadCount}`;
-                        }
-
-                        // Small buffer to avoid hitting API rate limits
-                        await new Promise(r => setTimeout(r, 200));
-                    } catch (e) {
-                        console.error('Failed to sync post:', e);
-                        processed++;
+                // Function to update button text
+                const updateButtonStatus = () => {
+                    if (syncBtn) {
+                        syncBtn.textContent = `Downloading: ${currentSyncedCount}/${totalUnreadCount}`;
                     }
+                };
+
+                updateButtonStatus();
+
+                // Worker pool for parallel downloads (concurrency = 3)
+                const CONCURRENCY = 3;
+                let postIndex = 0;
+
+                const worker = async () => {
+                    while (postIndex < needsSync.length) {
+                        const localIndex = postIndex++;
+                        const post = needsSync[localIndex];
+                        if (!post) continue;
+
+                        try {
+                            const text = getPostSpeechText(post);
+                            const postId = post.videoUrl;
+                            const postElement = document.querySelector(`[data-id="${postId}"]`);
+
+                            // Start synthesis
+                            const result = await synthesizeSpeech(text);
+
+                            // Update border NOW to reflect 'in_progress' from cache
+                            if (postElement) {
+                                await updatePostReadyStatus(postElement);
+                            }
+
+                            // Wait for chunked processing if needed
+                            if (result && typeof result === 'object' && result.isProcessing) {
+                                await new Promise(resolve => {
+                                    let waitTime = 0;
+                                    const check = () => {
+                                        if (!result.isProcessing || waitTime > 60000) resolve(); // 60s timeout
+                                        else {
+                                            waitTime += 200;
+                                            setTimeout(check, 200);
+                                        }
+                                    };
+                                    check();
+                                });
+                            }
+
+                            currentSyncedCount++;
+                            updateButtonStatus();
+
+                            // Update border to READY (or what matches current cache)
+                            if (postElement) {
+                                await updatePostReadyStatus(postElement);
+                            }
+
+                            // Small buffer to avoid hitting API rate limits too hard
+                            await new Promise(r => setTimeout(r, 100));
+                        } catch (e) {
+                            console.error('Failed to sync post:', e);
+                        }
+                    }
+                };
+
+                // Start workers
+                const workersCount = Math.min(CONCURRENCY, needsSync.length);
+                const workers = [];
+                for (let i = 0; i < workersCount; i++) {
+                    workers.push(worker());
                 }
+
+                await Promise.all(workers);
+
 
                 // Final update
                 await updateAllPostsReadyStatus();
