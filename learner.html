@@ -2279,13 +2279,27 @@
                     if (script) script.remove();
                 };
 
+                const script = document.createElement('script');
+                script.id = callbackId;
+
+                // Set a timeout of 15 seconds
+                const timeoutId = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('JSONP request timed out'));
+                }, 15000);
+
+                // Handle script loading errors
+                script.onerror = () => {
+                    clearTimeout(timeoutId);
+                    cleanup();
+                    reject(new Error('Failed to load JSONP script'));
+                };
+
                 window[callbackName] = function(response) {
+                    clearTimeout(timeoutId);
                     cleanup();
                     resolve(response);
                 };
-
-                const script = document.createElement('script');
-                script.id = callbackId;
 
                 // Construct the URL with the custom response handler
                 let finalUrl = url;
@@ -2298,20 +2312,7 @@
                 }
 
                 script.src = finalUrl;
-                script.onerror = () => {
-                    cleanup();
-                    reject(new Error('Failed to load data from network'));
-                };
-
-                document.head.appendChild(script);
-
-                // Safety timeout
-                setTimeout(() => {
-                    if (window[callbackName]) {
-                        cleanup();
-                        reject(new Error('Data request timed out'));
-                    }
-                }, 10000);
+                document.body.appendChild(script);
             });
         }
 
@@ -2523,10 +2524,9 @@
         }
 
         async function updateAllPostsReadyStatus() {
-            const posts = document.querySelectorAll('.blog-post');
-            for (const post of posts) {
-                await updatePostReadyStatus(post);
-            }
+            const posts = Array.from(document.querySelectorAll('.blog-post'));
+            // Process in parallel to avoid sequential delay
+            await Promise.all(posts.map(post => updatePostReadyStatus(post)));
         }
 
         async function updateSyncStatusDisplay() {
@@ -3135,78 +3135,81 @@
             const visiblePostElements = Array.from(container.querySelectorAll('.blog-post:not(.read)'))
                 .filter(el => el.style.display !== 'none');
 
-            const total = visiblePostElements.length;
-
-            if (total === 0) {
+            if (visiblePostElements.length === 0) {
                 showSyncNotification('All visible posts are already synced!', 2000);
                 updateSyncStatusDisplay();
                 return;
             }
 
-            const notification = showSyncNotification(`Syncing: 0/${total}...`, 0);
+            const notification = showSyncNotification(`Scanning posts...`, 0);
 
             try {
                 // Fetch data for the current tab to map DOM elements to data objects
                 const postsData = await getAllPostsSync(currentTab);
 
                 // Map visible elements to their corresponding data objects
-                let postsToSync = visiblePostElements.map(el => {
+                const postsToSyncRaw = visiblePostElements.map(el => {
                     const id = el.getAttribute('data-id');
                     return postsData.find(p => (p.videoUrl === id || p.noteId === id));
                 }).filter(p => p !== null);
 
                 if (limit !== null) {
-                    postsToSync = postsToSync.slice(0, limit);
+                    postsToSyncRaw.splice(limit);
                 }
 
-                // Filter out posts that are already in IndexedDB
+                // Filter out posts that are already in IndexedDB - optimize with Promise.all
                 const needsSync = [];
-                for (const post of postsToSync) {
+                const cacheResults = await Promise.all(postsToSyncRaw.map(async post => {
                     const text = getPostSpeechText(post);
                     const useChinese = containsChinese(text);
                     const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
                     const cacheKey = await hashText(text + selectedVoice.languageCode + selectedVoice.ssmlGender);
-
                     const cached = await AppCache.get(STORES.AUDIO, cacheKey);
-                    if (!cached || cached.status !== 'done') {
-                        needsSync.push(post);
-                    }
+                    return { post, isCached: cached && cached.status === 'done' };
+                }));
+
+                for (const res of cacheResults) {
+                    if (!res.isCached) needsSync.push(res.post);
                 }
 
                 const total = needsSync.length;
                 if (total === 0) {
-                    // Update borders even if nothing to sync
+                    notification.textContent = 'All posts are already synced!';
                     await updateAllPostsReadyStatus();
                     updateSyncStatusDisplay();
+                    setTimeout(() => notification.remove(), 2000);
                     return;
                 }
-
-                const notification = showSyncNotification(`Syncing: 0/${total}...`, 0);
 
                 let processed = 0;
                 for (const post of needsSync) {
                     try {
-                        const text = getPostSpeechText(post);
-                        const useChinese = containsChinese(text);
-                        const selectedVoice = useChinese ? GOOGLE_CLOUD_TTS_CONFIG.voice : GOOGLE_CLOUD_TTS_CONFIG.fallbackVoice;
-                        const cacheKey = await hashText(text + selectedVoice.languageCode + selectedVoice.ssmlGender);
+                        const currentNum = processed + 1;
+                        if (notification.parentElement) {
+                            notification.textContent = `Syncing: ${currentNum}/${total}...`;
+                        }
 
-                        // Start synthesis and WAIT for it to complete if it's chunked
+                        const text = getPostSpeechText(post);
+
+                        // Start synthesis and WAIT for it to complete
                         const result = await synthesizeSpeech(text);
+
+                        // Wait for chunked processing if needed
                         if (result && typeof result === 'object' && result.isProcessing) {
                             await new Promise(resolve => {
+                                let waitTime = 0;
                                 const check = () => {
-                                    if (!result.isProcessing) resolve();
-                                    else setTimeout(check, 200);
+                                    if (!result.isProcessing || waitTime > 30000) resolve(); // 30s timeout per post
+                                    else {
+                                        waitTime += 200;
+                                        setTimeout(check, 200);
+                                    }
                                 };
                                 check();
                             });
                         }
 
                         processed++;
-                        if (notification.parentElement) {
-                            notification.textContent = `Syncing: ${processed}/${total}...`;
-                        }
 
                         // Update border for this post
                         const postId = post.tabType === 'videos' ? post.videoUrl : post.noteId;
@@ -3215,8 +3218,8 @@
                              await updatePostReadyStatus(postElement);
                         }
 
-                        // Small buffer to avoid hitting API rate limits too hard
-                        await new Promise(r => setTimeout(r, 500));
+                        // Small buffer to avoid hitting API rate limits
+                        await new Promise(r => setTimeout(r, 300));
                     } catch (e) {
                         console.error('Failed to sync post:', e);
                         processed++;
@@ -3226,7 +3229,7 @@
                     }
                 }
 
-                // Final update of all borders and counts
+                // Final update
                 await updateAllPostsReadyStatus();
                 if (notification.parentElement) {
                     notification.textContent = `Sync complete!`;
