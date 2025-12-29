@@ -3196,24 +3196,55 @@
                 e.stopPropagation();
                 const current = getCurrentVisiblePost();
                 if (current) {
-                    scrollToAdjacentPost(current, -1);
+                    const activeContainer = document.getElementById(`${currentTab}-container`);
+                    const posts = Array.from(activeContainer.querySelectorAll('.blog-post'))
+                        .filter(el => el.style.display !== 'none');
+                    const idx = posts.indexOf(current);
+                    if (idx > 0) {
+                        const target = posts[idx - 1];
+                        scrollToAdjacentPost(current, -1);
+                        const listenBtn = target.querySelector('.listen-btn');
+                        if (listenBtn) {
+                            unlockAudio();
+                            // Stop current if playing, then play target
+                            stopAllPlayback();
+                            setTimeout(() => toggleSpeech(listenBtn), 100);
+                        }
+                    }
                 }
             });
 
             nextPostBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const current = getCurrentVisiblePost();
+                const activeContainer = document.getElementById(`${currentTab}-container`);
+                if (!activeContainer) return;
+
+                const posts = Array.from(activeContainer.querySelectorAll('.blog-post'))
+                    .filter(el => el.style.display !== 'none');
+
+                let target = null;
                 if (current) {
-                    scrollToAdjacentPost(current, 1);
+                    const idx = posts.indexOf(current);
+                    if (idx !== -1 && idx < posts.length - 1) {
+                        target = posts[idx + 1];
+                        scrollToAdjacentPost(current, 1);
+                    }
                 } else {
-                    const activeContainer = document.getElementById(`${currentTab}-container`);
-                    if (activeContainer) {
-                        const firstPost = activeContainer.querySelector('.blog-post:not([style*="display: none"])');
-                        if (firstPost) {
-                            const headerHeight = 70;
-                            const rect = firstPost.getBoundingClientRect();
-                            window.scrollTo({ top: rect.top + window.scrollY - headerHeight + 5, behavior: 'smooth' });
-                        }
+                    target = posts[0];
+                    if (target) {
+                        const headerHeight = 70;
+                        const rect = target.getBoundingClientRect();
+                        window.scrollTo({ top: rect.top + window.scrollY - headerHeight + 5, behavior: 'smooth' });
+                    }
+                }
+
+                if (target) {
+                    const listenBtn = target.querySelector('.listen-btn');
+                    if (listenBtn) {
+                        unlockAudio();
+                        stopAllPlayback();
+                        setTimeout(() => toggleSpeech(listenBtn), 100);
                     }
                 }
             });
