@@ -1465,10 +1465,9 @@
         <h1 class="header-title" id="header-title">Learner</h1>
         <!-- Header Audio Control - shown when audio is playing -->
         <div class="header-audio-control" id="header-audio-control">
-            <button class="header-audio-btn" id="header-audio-btn" title="Pause/Play audio">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
-                    <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            <button class="header-audio-btn" id="header-audio-btn" title="Mark as read">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </button>
         </div>
@@ -3271,55 +3270,40 @@
             const headerTitle = document.getElementById('header-title');
             if (!headerBtn || !headerControl) return;
 
-            // Hide audio control when header shows "Learner" (no post title)
+            // Hide action control when header shows "Learner" (no post title)
             const isShowingPostTitle = headerTitle && headerTitle.textContent !== 'Learner';
             if (!isShowingPostTitle) {
                 headerControl.style.display = 'none';
-                headerBtn._activeListenButton = null;
+                headerBtn._currentPost = null;
                 return;
             }
             headerControl.style.display = 'flex';
 
-            // Get the current post under the header to sync with title
+            // Get the current post under the header
             const currentPost = getPostUnderHeader();
+            headerBtn._currentPost = currentPost;
+
             if (!currentPost) {
-                // No post under header (shouldn't happen if isShowingPostTitle is true, but for safety)
-                headerBtn.classList.remove('playing');
-                headerBtn.title = 'Play audio';
-                headerBtn._activeListenButton = null;
-                setHeaderAudioIcon(headerBtn, 'play');
+                headerBtn.style.opacity = '0.5';
+                headerBtn.title = 'Mark as read';
+                setHeaderAudioIcon(headerBtn, 'check');
                 return;
             }
 
-            // Find the listen button for the current post
-            const listenBtn = currentPost.querySelector('.listen-btn');
-            headerBtn._activeListenButton = listenBtn;
-
-            if (!listenBtn || !listenBtn.speechState) {
-                // No listen button or no speech state - show play icon
-                headerBtn.classList.remove('playing');
-                headerBtn.title = 'Play audio';
-                setHeaderAudioIcon(headerBtn, 'play');
-                return;
-            }
-
-            const { isPlaying, isPaused } = listenBtn.speechState;
-
-            if (isPlaying && !isPaused) {
-                // Current post's audio is playing - show pause icon
-                headerBtn.classList.add('playing');
-                headerBtn.title = 'Pause audio';
-                setHeaderAudioIcon(headerBtn, 'pause');
-            } else {
-                // Current post's audio is not playing (or paused) - show play icon
-                headerBtn.classList.remove('playing');
-                headerBtn.title = isPaused ? 'Resume audio' : 'Play audio';
-                setHeaderAudioIcon(headerBtn, 'play');
-            }
+            headerBtn.style.opacity = '1';
+            const isRead = currentPost.classList.contains('read');
+            headerBtn.title = isRead ? 'Mark as unread' : 'Mark as read';
+            setHeaderAudioIcon(headerBtn, 'check');
         }
 
         function setHeaderAudioIcon(btn, type) {
-            if (type === 'pause') {
+            if (type === 'check') {
+                btn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                `;
+            } else if (type === 'pause') {
                 btn.innerHTML = `
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
@@ -5344,13 +5328,14 @@
 
             headerBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                unlockAudio(); // CRITICAL: unlock here too
 
-                // Get the active listen button reference
-                const activeListenBtn = headerBtn._activeListenButton;
-                if (activeListenBtn) {
-                    // Trigger the same toggle as clicking the listen button
-                    toggleSpeech(activeListenBtn);
+                const currentPost = headerBtn._currentPost || getPostUnderHeader();
+                if (currentPost) {
+                    const markBtn = currentPost.querySelector('.mark-read-btn-bottom');
+                    if (markBtn) {
+                        markBtn.click();
+                        updateHeaderAudioControl();
+                    }
                 }
             });
         }
