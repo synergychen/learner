@@ -840,7 +840,7 @@
 
         .audio-status {
             font-size: calc(0.6rem * var(--font-scale));
-            margin-left: 8px;
+            margin-right: 8px;
             padding: 5px 10px;
             border-radius: 20px;
             font-weight: 800;
@@ -2173,10 +2173,11 @@
                 dateText = `Published: ${formatDate(post.publishedAt)}`;
             }
 
-            const readingTime = calculateReadingTime(post.summary || '');
+            const baseSecs = calculateReadingTime(post.summary || '');
             const readingTimeSpan = document.createElement('span');
             readingTimeSpan.className = 'reading-time';
-            readingTimeSpan.textContent = readingTime;
+            readingTimeSpan.setAttribute('data-base-secs', baseSecs);
+            updateReadingTimeDisplay(readingTimeSpan);
 
             const audioStatusSpan = document.createElement('span');
             audioStatusSpan.className = 'audio-status';
@@ -2185,8 +2186,8 @@
                 metadataInfo.textContent = dateText;
                 metadataInfo.appendChild(document.createElement('br'));
             }
-            metadataInfo.appendChild(readingTimeSpan);
             metadataInfo.appendChild(audioStatusSpan);
+            metadataInfo.appendChild(readingTimeSpan);
 
             dateElement.appendChild(metadataInfo);
 
@@ -4442,26 +4443,37 @@
         function updateAudioMinutes(button, durationSeconds) {
             if (!durationSeconds || durationSeconds <= 0) return;
 
-            const playbackRate = window.currentPlaybackSpeed || 1.0;
-            // if it actually took 10 minutes to play and play speed is 2x then the audio time is 20 minutes
-            const contentMinutes = (durationSeconds * playbackRate) / 60;
-            const contentMinutesRounded = Math.ceil(contentMinutes);
-
             // Find the reading-time span in the post header
             const postHeader = button.closest('.post-header');
             if (postHeader) {
                 const readingTimeSpan = postHeader.querySelector('.reading-time');
                 if (readingTimeSpan) {
-                    const originalText = readingTimeSpan.textContent.split(' / ')[0];
-                    readingTimeSpan.textContent = `${originalText} / ${contentMinutesRounded} min audio`;
+                    // Store the actual duration as the new base
+                    readingTimeSpan.setAttribute('data-base-secs', durationSeconds);
+                    updateReadingTimeDisplay(readingTimeSpan);
                 }
             }
         }
 
-        // Function to calculate reading time based on word count (English) and character count (Chinese)
+        // Update a single reading time span based on current playback speed
+        function updateReadingTimeDisplay(span) {
+            const baseSecs = parseFloat(span.getAttribute('data-base-secs')) || 0;
+            const speed = window.currentPlaybackSpeed || 1.0;
+            const adjustedMins = Math.ceil((baseSecs / speed) / 60);
+            span.textContent = `${Math.max(1, adjustedMins)} mins`;
+        }
+
+        // Update all visible reading time spans (called when speed changes)
+        function updateAllReadingTimes() {
+            document.querySelectorAll('.reading-time').forEach(span => {
+                updateReadingTimeDisplay(span);
+            });
+        }
+
+        // Function to calculate reading time in base seconds (1x speed)
         function calculateReadingTime(text) {
             if (!text || text.trim().length === 0) {
-                return '1 min read';
+                return 60; // Default 1 minute
             }
 
             // Remove HTML tags and get plain text
@@ -4479,14 +4491,13 @@
             const englishWords = englishText.trim().split(/\s+/).filter(word => word.length > 0 && /[a-zA-Z]/.test(word));
             const englishWordCount = englishWords.length;
 
-            // Calculate reading time: English words / 250 + Chinese characters / 400
-            const englishReadingTime = englishWordCount / 250;
-            const chineseReadingTime = chineseCharCount / 400;
-            const totalReadingTime = englishReadingTime + chineseReadingTime;
-            const readingTimeMinutes = Math.ceil(totalReadingTime);
+            // Calculate reading time: English words / 170 + Chinese characters / 250
+            const englishReadingTime = englishWordCount / 170;
+            const chineseReadingTime = chineseCharCount / 250;
+            const totalReadingTimeMins = englishReadingTime + chineseReadingTime;
 
-            // Return formatted reading time (minimum 1 minute)
-            return `${Math.max(1, readingTimeMinutes)} min read`;
+            // Return base seconds (minimum 1 minute worth)
+            return Math.max(1, totalReadingTimeMins) * 60;
         }
 
         // Function to call Google Cloud Text-to-Speech API with text chunking for long content
@@ -5173,6 +5184,9 @@
 
                 // Update global playback speed variable for audio elements
                 window.currentPlaybackSpeed = speed;
+
+                // Update all reading time displays according to the new speed
+                updateAllReadingTimes();
             }
 
             playbackSpeedDecrease.addEventListener('click', () => updatePlaybackSpeed(currentSpeedIndex - 1));
