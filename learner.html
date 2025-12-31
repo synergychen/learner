@@ -3385,7 +3385,10 @@
                 }
             }
 
-            if (activePost) {
+            // Check if scrolled to top to show default title/menu
+            const isAtTop = window.scrollY <= 10;
+
+            if (activePost && !isAtTop) {
                 headerTitle.textContent = activePost.title || 'Untitled';
                 headerMenu.style.display = 'none';
                 headerControl.style.display = 'flex';
