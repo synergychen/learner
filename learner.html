@@ -145,6 +145,21 @@
             transition: width 0.1s ease-out;
         }
 
+        .header-time-info {
+            position: absolute;
+            bottom: 4px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 8px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.9);
+            pointer-events: none;
+            z-index: 101;
+            font-weight: 300;
+        }
+
         .header-title {
             font-size: calc(1.2rem * var(--font-scale));
             font-weight: 100;
@@ -1472,6 +1487,10 @@
             </button>
         </div>
         <div class="header-progress" id="header-progress"></div>
+        <div class="header-time-info" id="header-time-info">
+            <span id="header-time-current"></span>
+            <span id="header-time-remaining"></span>
+        </div>
         <button class="header-menu" id="header-menu" title="Settings">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
@@ -2017,15 +2036,33 @@
             }
         });
 
+        function formatMMSS(seconds) {
+            if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
         // Update header progress bar based on audio playback progress
         window.sharedAudio.addEventListener('timeupdate', () => {
             const headerProgress = document.getElementById('header-progress');
+            const timeCurrent = document.getElementById('header-time-current');
+            const timeRemaining = document.getElementById('header-time-remaining');
+
             if (headerProgress) {
                 if (window.sharedAudio.duration && isFinite(window.sharedAudio.duration)) {
                     const progress = (window.sharedAudio.currentTime / window.sharedAudio.duration) * 100;
                     headerProgress.style.width = `${progress}%`;
+
+                    if (timeCurrent) timeCurrent.textContent = formatMMSS(window.sharedAudio.currentTime);
+                    if (timeRemaining) {
+                        const remaining = window.sharedAudio.duration - window.sharedAudio.currentTime;
+                        timeRemaining.textContent = `-${formatMMSS(remaining)}`;
+                    }
                 } else {
                     headerProgress.style.width = '0%';
+                    if (timeCurrent) timeCurrent.textContent = '';
+                    if (timeRemaining) timeRemaining.textContent = '';
                 }
             }
         });
@@ -2033,12 +2070,20 @@
         // Reset progress when audio ends or starts loading new source
         window.sharedAudio.addEventListener('ended', () => {
             const headerProgress = document.getElementById('header-progress');
+            const timeCurrent = document.getElementById('header-time-current');
+            const timeRemaining = document.getElementById('header-time-remaining');
             if (headerProgress) headerProgress.style.width = '0%';
+            if (timeCurrent) timeCurrent.textContent = '';
+            if (timeRemaining) timeRemaining.textContent = '';
         });
 
         window.sharedAudio.addEventListener('loadstart', () => {
             const headerProgress = document.getElementById('header-progress');
+            const timeCurrent = document.getElementById('header-time-current');
+            const timeRemaining = document.getElementById('header-time-remaining');
             if (headerProgress) headerProgress.style.width = '0%';
+            if (timeCurrent) timeCurrent.textContent = '';
+            if (timeRemaining) timeRemaining.textContent = '';
         });
 
         // Function to unlock audio on first human interaction
