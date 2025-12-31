@@ -3815,7 +3815,6 @@
         function setupHeaderTitleUpdate() {
             const headerTitle = document.getElementById('header-title');
             const headerMenu = document.getElementById('header-menu');
-            let currentPost = null;
             const originalTitle = 'Learner';
 
             window.addEventListener('scroll', function() {
@@ -3825,13 +3824,16 @@
 
             // Click handler for header title to scroll to current post
             headerTitle.addEventListener('click', function() {
-                if (currentPost && headerTitle.textContent !== originalTitle) {
-                    const headerHeight = 70; // Header height with padding
-                    const offset = currentPost.offsetTop - headerHeight;
-                    window.scrollTo({
-                        top: offset,
-                        behavior: 'smooth'
-                    });
+                if (window.currentAudioButton && headerTitle.textContent !== originalTitle) {
+                    const currentPostElement = window.currentAudioButton.closest('.blog-post');
+                    if (currentPostElement) {
+                        const headerHeight = 70; // Header height with padding
+                        const offset = currentPostElement.offsetTop - headerHeight;
+                        window.scrollTo({
+                            top: offset,
+                            behavior: 'smooth'
+                        });
+                    }
                 }
             });
         }
