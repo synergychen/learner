@@ -2017,6 +2017,30 @@
             }
         });
 
+        // Update header progress bar based on audio playback progress
+        window.sharedAudio.addEventListener('timeupdate', () => {
+            const headerProgress = document.getElementById('header-progress');
+            if (headerProgress) {
+                if (window.sharedAudio.duration && isFinite(window.sharedAudio.duration)) {
+                    const progress = (window.sharedAudio.currentTime / window.sharedAudio.duration) * 100;
+                    headerProgress.style.width = `${progress}%`;
+                } else {
+                    headerProgress.style.width = '0%';
+                }
+            }
+        });
+
+        // Reset progress when audio ends or starts loading new source
+        window.sharedAudio.addEventListener('ended', () => {
+            const headerProgress = document.getElementById('header-progress');
+            if (headerProgress) headerProgress.style.width = '0%';
+        });
+
+        window.sharedAudio.addEventListener('loadstart', () => {
+            const headerProgress = document.getElementById('header-progress');
+            if (headerProgress) headerProgress.style.width = '0%';
+        });
+
         // Function to unlock audio on first human interaction
         function unlockAudio() {
             if (window.sharedAudio._unlocked) return;
@@ -2049,6 +2073,8 @@
                 window.sharedAudio.src = '';
                 window.sharedAudio._unlocked = false;
             }
+            const headerProgress = document.getElementById('header-progress');
+            if (headerProgress) headerProgress.style.width = '0%';
             window.currentAudioButton = null;
         });
 
@@ -3782,7 +3808,6 @@
         function setupHeaderTitleUpdate() {
             const headerTitle = document.getElementById('header-title');
             const headerMenu = document.getElementById('header-menu');
-            const headerProgress = document.getElementById('header-progress');
             let currentPost = null;
             const originalTitle = 'Learner';
 
@@ -3798,19 +3823,9 @@
                         headerTitle.textContent = postTitle;
                         headerMenu.style.display = 'none'; // Hide settings icon
                     }
-
-                    // Update progress bar based on scroll position within current post
-                    const postTop = currentPost.offsetTop;
-                    const postHeight = currentPost.offsetHeight;
-                    const headerHeight = 70;
-                    const headerBottomPosition = scrollTop + headerHeight;
-                    const scrolledInPost = headerBottomPosition - postTop;
-                    const progress = Math.min(100, Math.max(0, (scrolledInPost / postHeight) * 100));
-                    headerProgress.style.width = `${progress}%`;
                 } else {
                     headerTitle.textContent = originalTitle;
                     headerMenu.style.display = 'flex'; // Show settings icon
-                    headerProgress.style.width = '0%'; // Hide progress bar
                 }
 
                 // Ensure header audio control is also updated and synced
