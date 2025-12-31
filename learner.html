@@ -3273,7 +3273,18 @@
 
             prevPostBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const current = getCurrentVisiblePost();
+
+                // Priority: Use the currently playing/active audio post as the reference
+                let current = null;
+                if (window.currentAudioButton && (window.currentAudioButton.speechState.isPlaying || window.currentAudioButton.speechState.isPaused)) {
+                    current = window.currentAudioButton.closest('.blog-post');
+                }
+
+                // Fallback to visible post if no audio active
+                if (!current) {
+                    current = getCurrentVisiblePost();
+                }
+
                 if (current) {
                     const activeContainer = document.getElementById(`${currentTab}-container`);
                     const posts = Array.from(activeContainer.querySelectorAll('.blog-post'))
@@ -3295,7 +3306,18 @@
 
             nextPostBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const current = getCurrentVisiblePost();
+
+                // Priority: Use the currently playing/active audio post as the reference
+                let current = null;
+                if (window.currentAudioButton && (window.currentAudioButton.speechState.isPlaying || window.currentAudioButton.speechState.isPaused)) {
+                    current = window.currentAudioButton.closest('.blog-post');
+                }
+
+                // Fallback to visible post if no audio active
+                if (!current) {
+                    current = getCurrentVisiblePost();
+                }
+
                 const activeContainer = document.getElementById(`${currentTab}-container`);
                 if (!activeContainer) return;
 
@@ -3331,6 +3353,17 @@
             markBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
 
+                // Priority: Use the currently playing/active audio button
+                if (window.currentAudioButton) {
+                    const speechState = window.currentAudioButton.speechState;
+                    if (speechState.isPlaying || speechState.isPaused) {
+                        unlockAudio();
+                        toggleSpeech(window.currentAudioButton);
+                        updateFloatingMarkState();
+                        return;
+                    }
+                }
+
                 const current = getCurrentVisiblePost();
                 if (current) {
                     const listenBtn = current.querySelector('.listen-btn');
@@ -3363,23 +3396,32 @@
             // Update header audio control based on current visible post
             updateHeaderAudioControl();
 
-            const currentPost = getPostUnderHeader() || getCurrentVisiblePost();
-            if (!currentPost) {
+            let activeListenBtn = null;
+
+            // Priority: Currently playing/active audio
+            if (window.currentAudioButton) {
+                const speechState = window.currentAudioButton.speechState;
+                if (speechState.isPlaying || speechState.isPaused) {
+                    activeListenBtn = window.currentAudioButton;
+                }
+            }
+
+            // Fallback: Visible post
+            if (!activeListenBtn) {
+                const currentPost = getPostUnderHeader() || getCurrentVisiblePost();
+                if (currentPost) {
+                    activeListenBtn = currentPost.querySelector('.listen-btn');
+                }
+            }
+
+            if (!activeListenBtn || !activeListenBtn.speechState) {
                 markBtn.setAttribute('aria-label', 'Play audio');
                 markBtn.title = 'Play audio';
                 setFloatingMarkIcon(markBtn, 'play');
                 return;
             }
 
-            const listenBtn = currentPost.querySelector('.listen-btn');
-            if (!listenBtn || !listenBtn.speechState) {
-                markBtn.setAttribute('aria-label', 'Play audio');
-                markBtn.title = 'Play audio';
-                setFloatingMarkIcon(markBtn, 'play');
-                return;
-            }
-
-            const { isPlaying, isPaused } = listenBtn.speechState;
+            const { isPlaying, isPaused } = activeListenBtn.speechState;
 
             if (isPlaying && !isPaused) {
                 markBtn.setAttribute('aria-label', 'Pause audio');
