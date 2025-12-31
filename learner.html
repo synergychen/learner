@@ -3482,6 +3482,13 @@
             // Check if scrolled to top to show default title/menu
             const isAtTop = window.scrollY <= 10;
 
+            // Toggle audio-active class based on whether audio is active
+            if (activePost) {
+                document.querySelector('.header').classList.add('audio-active');
+            } else {
+                document.querySelector('.header').classList.remove('audio-active');
+            }
+
             if (activePost && !isAtTop) {
                 headerTitle.textContent = activePost.title || 'Untitled';
                 headerMenu.style.display = 'none';
@@ -3492,13 +3499,11 @@
                 const isRead = activePostElement && activePostElement.classList.contains('read');
                 headerBtn.title = isRead ? 'Mark as unread' : 'Mark as read';
                 setHeaderAudioIcon(headerBtn, 'check');
-                document.querySelector('.header').classList.add('audio-active');
             } else {
                 headerTitle.textContent = originalTitle;
                 headerMenu.style.display = 'flex';
                 headerControl.style.display = 'none';
                 headerBtn._currentPost = null;
-                document.querySelector('.header').classList.remove('audio-active');
             }
         }
 
