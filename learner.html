@@ -133,6 +133,11 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: padding 0.3s ease;
+        }
+
+        .header.audio-active {
+            padding-bottom: 24px;
         }
 
         .header-progress {
@@ -3445,11 +3450,13 @@
                 const isRead = activePostElement && activePostElement.classList.contains('read');
                 headerBtn.title = isRead ? 'Mark as unread' : 'Mark as read';
                 setHeaderAudioIcon(headerBtn, 'check');
+                document.querySelector('.header').classList.add('audio-active');
             } else {
                 headerTitle.textContent = originalTitle;
                 headerMenu.style.display = 'flex';
                 headerControl.style.display = 'none';
                 headerBtn._currentPost = null;
+                document.querySelector('.header').classList.remove('audio-active');
             }
         }
 
