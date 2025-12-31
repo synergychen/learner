@@ -127,7 +127,7 @@
             right: 0;
             width: 100%;
             background: #071df5;
-            padding: 15px 20px;
+            padding: 12px 15px; /* Reduced from 15px 20px to match labels */
             z-index: 100;
             display: flex;
             justify-content: space-between;
@@ -152,7 +152,7 @@
             right: 0;
             display: flex;
             justify-content: space-between;
-            padding: 0 8px;
+            padding: 0 15px; /* Increased from 8px to match header padding */
             font-size: 12px;
             color: rgba(255, 255, 255, 0.9);
             pointer-events: none;
@@ -167,6 +167,8 @@
             margin: 0;
             transition: all 0.3s ease;
             cursor: pointer;
+            text-align: left;
+            flex: 1;
         }
 
         .header-menu {
